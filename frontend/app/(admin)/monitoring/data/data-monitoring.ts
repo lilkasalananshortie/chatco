@@ -45,8 +45,8 @@ export interface OverspeedLog {
   id: string;
   unit: string;
   driver: string;
+  conductor: string;
   speed: number;
-  zone: string;
   loggedAt: string;
   loggedDate: string;
 }
@@ -241,16 +241,18 @@ export function useMonitoringData() {
       const data = await res.json();
       const raw = (data.data ?? []) as Array<{
         id: string; unit: string; plate: string; speed: number;
-        driver: string | null; last_update: string | null;
+        driver: string | null; conductor: string | null;
+        date: string | null; last_update: string | null;
       }>;
       const mapped: OverspeedLog[] = raw.map(v => ({
         id: v.id,
-        unit: v.unit ?? v.plate ?? '—',
+        // Unit identified by plate number (per requirement), falling back to unit no.
+        unit: v.plate ?? v.unit ?? '—',
         driver: v.driver ?? '—',
+        conductor: v.conductor ?? '—',
         speed: v.speed,
-        zone: 'Live',
         loggedAt: v.last_update ? formatRelativeTime(v.last_update) : '—',
-        loggedDate: v.last_update ? new Date(v.last_update).toISOString().split('T')[0] : '',
+        loggedDate: v.date ?? (v.last_update ? new Date(v.last_update).toISOString().split('T')[0] : ''),
       }));
       setOverspeedHistory(mapped);
     } catch {

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getConductorSession, unauthorizedResponse } from "@/lib/conductor/server/auth";
 import { jsonData, jsonError } from "@/lib/conductor/server/response";
 import { proxyToLaravel } from "@/lib/conductor/server/proxy";
+import { mapRemittance } from "@/lib/conductor/server/mappers";
 import * as store from "@/lib/conductor/server/store";
 import type { RemittanceRecord } from "@/lib/conductor/persistence/remittance.store";
 
@@ -11,7 +12,18 @@ export async function GET(request: NextRequest) {
 
   const result = await proxyToLaravel(request, "/conductor/remittances", { method: "GET" });
   if (result.ok) {
-    return jsonData(result.data);
+    // Laravel returns a paginator: { data: [...rows], current_page, ... }.
+    // Unwrap the inner array (tolerating a bare array too) and map each raw
+    // Remittance model to the frontend's RemittanceRecord shape. Returning
+    // the paginator OBJECT directly would make the client's `history` a
+    // non-array, crashing the end-of-day page on `history.filter(...)`.
+    const raw = result.data as { data?: unknown } | unknown[] | null;
+    const rows = Array.isArray(raw)
+      ? raw
+      : Array.isArray((raw as { data?: unknown })?.data)
+        ? ((raw as { data: unknown[] }).data)
+        : [];
+    return jsonData(rows.map(mapRemittance));
   }
 
   return jsonError(result.message ?? "Unable to load remittances.", result.status);

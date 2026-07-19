@@ -1,16 +1,31 @@
 // app/(commuter)/rewards/page.tsx
 "use client";
 
+import { useState } from "react";
 import { useRewards } from "./use-rewards";
 import { useAnnouncements } from "../announcements/use-announcements";
-import { Voucher, AnnouncementType } from "./types";
+import { Voucher, AnnouncementType, Announcement } from "./types";
 
-const announcementConfig: Record<AnnouncementType, { color: string; bg: string; label: string }> = {
-  PROMO: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Promo" },
-  SAFETY: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Safety" },
-  SYSTEM: { color: "text-[#62A0EA]", bg: "bg-[#1A5FB4]/10 border-[#1A5FB4]/20", label: "System" },
-  MAINTENANCE: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", label: "Advisory" },
+// Each category gets a catchy emoji + colour so announcements pop in the feed.
+const announcementConfig: Record<AnnouncementType, { color: string; bg: string; label: string; emoji: string }> = {
+  PROMO: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Promo", emoji: "🎉" },
+  SAFETY: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Safety", emoji: "🛡️" },
+  SYSTEM: { color: "text-[#62A0EA]", bg: "bg-[#1A5FB4]/10 border-[#1A5FB4]/20", label: "System", emoji: "🔔" },
+  MAINTENANCE: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", label: "Advisory", emoji: "🚧" },
 };
+
+function formatRelativeTime(iso: string): string {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
 
 export default function RewardsPage() {
   const { 
@@ -18,9 +33,18 @@ export default function RewardsPage() {
     showVoucherModal, setShowVoucherModal, activeVoucher, redeemVoucher
   } = useRewards();
 
-  const { 
-    announcements, isLoading: announcementsLoading, markAsRead, markAllAsRead, unreadCount 
+  const {
+    announcements, isLoading: announcementsLoading, markAsRead, markAllAsRead, unreadCount
   } = useAnnouncements();
+
+  // The announcement currently expanded in the overlay modal (null = closed).
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+
+  // Open the full-detail modal + mark the item as read in one tap.
+  const openAnnouncement = (item: Announcement) => {
+    markAsRead(item.id);
+    setSelectedAnnouncement(item);
+  };
 
   if (rewardsLoading || announcementsLoading || !data) {
     return (
@@ -65,16 +89,17 @@ export default function RewardsPage() {
             {announcements.slice(0, 3).map((item) => {
               const config = announcementConfig[item.type];
               return (
-                <div 
-                  key={item.id} 
-                  onClick={() => markAsRead(item.id)}
+                <div
+                  key={item.id}
+                  onClick={() => openAnnouncement(item)}
                   className={`relative bg-[#071A2E] border rounded-xl p-4 transition-all duration-300 cursor-pointer hover:bg-[#0B1E33] ${item.isRead ? 'border-white/5 opacity-60' : 'border-white/10 shadow-lg shadow-black/20'}`}
                 >
                   {!item.isRead && (
                     <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-[#62A0EA]" />
                   )}
                   <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${config.bg} ${config.color}`}>
+                    <div className={`mt-0.5 flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${config.bg} ${config.color}`}>
+                      <span className="text-[11px] leading-none">{config.emoji}</span>
                       {config.label}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -198,6 +223,35 @@ export default function RewardsPage() {
           </div>
         </div>
       )}
+
+      {/* --- ANNOUNCEMENT DETAIL MODAL --- */}
+      {selectedAnnouncement && (() => {
+        const config = announcementConfig[selectedAnnouncement.type];
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedAnnouncement(null)}>
+            <div className="bg-[#071A2E] w-full max-w-md rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden max-h-[85vh]" onClick={e => e.stopPropagation()}>
+              <div className="p-6 border-b border-white/10">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${config.bg} ${config.color}`}>
+                    <span className="text-sm leading-none">{config.emoji}</span>
+                    {config.label}
+                  </div>
+                  <span className="text-[11px] text-white/40">{formatRelativeTime(selectedAnnouncement.createdAt)}</span>
+                </div>
+                <h2 className="text-white font-bold text-lg leading-tight">{selectedAnnouncement.title}</h2>
+              </div>
+              <div className="p-6 overflow-y-auto">
+                <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap wrap-break-word">
+                  {selectedAnnouncement.message}
+                </p>
+              </div>
+              <div className="p-4 border-t border-white/10">
+                <button onClick={() => setSelectedAnnouncement(null)} className="w-full bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold py-3 rounded-xl border border-white/10 transition-colors">Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

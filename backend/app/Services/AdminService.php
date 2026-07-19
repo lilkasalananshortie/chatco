@@ -802,9 +802,20 @@ class AdminService
         $placeholderEmail = 'rejected+' . time() . '@chatco.local';
         $user->update(['email' => $placeholderEmail]);
 
+        // Free the username too. commuter_profiles.username has a DB-level
+        // unique index, and the profile row is NOT soft-deleted (only the
+        // User is), so the rejected applicant's username would otherwise stay
+        // locked forever — blocking them (or anyone) from reusing it on a
+        // fresh registration. Rewrite it to a unique placeholder keyed on the
+        // user id (guaranteed unique, fits the 50-char column). The original
+        // username isn't needed on a dead account — admins identify rejected
+        // applicants by name/contact in the Rejected tab.
+        $placeholderUsername = 'rejected_' . $user->id;
+
         $profile->update([
             'account_status'   => 'REJECTED',
             'rejection_reason' => $reason,
+            'username'         => $placeholderUsername,
         ]);
 
         // Soft-delete the user (cascades to commuter_profile via shared PK).

@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Enums\CapacityStatus;
 use App\Events\VehicleLocationUpdated;
+use App\Models\OverspeedEvent;
 use App\Models\ShiftLog;
 use App\Models\Vehicle;
 use App\Models\VehicleLocation;
 use App\Models\User;
 use App\Models\Setting;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class LocationService
@@ -68,10 +70,70 @@ class LocationService
         }
         $location->save();
 
-        // 5. Broadcast the update via Pusher
+        // 5. Record an overspeeding incident when the reported speed exceeds
+        //    the configured limit (persisted history for the admin monitoring
+        //    module — tracks the shift's TOP speed).
+        if ($speed !== null) {
+            $this->recordOverspeed($activeShift, (float) $speed);
+        }
+
+        // 6. Broadcast the update via Pusher
         $this->broadcastLocationUpdate($vehicleId);
 
         return $location;
+    }
+
+    /**
+     * The current speed limit in km/h (settings `speed_limit_kmh`, default 60),
+     * cached briefly so high-frequency GPS pings don't hammer the settings table.
+     */
+    private function speedLimitKmh(): int
+    {
+        return (int) Cache::remember('overspeed.limit_kmh', 60, function () {
+            return (int) (Setting::where('key', 'speed_limit_kmh')->value('value') ?? 60);
+        });
+    }
+
+    /**
+     * Record/refresh the overspeeding history row for a shift.
+     *
+     * One row per shift: the row keeps the HIGHEST speed reached over the
+     * limit. A faster ping raises top_speed; a slower (still-over) ping only
+     * refreshes last_logged_at. Speeds at or under the limit are ignored.
+     */
+    private function recordOverspeed(ShiftLog $shift, float $speed): void
+    {
+        $threshold = $this->speedLimitKmh();
+        if ($threshold <= 0 || $speed <= $threshold) {
+            return; // within the limit — nothing to log
+        }
+
+        $roundedSpeed = (int) round($speed);
+        $now = now();
+
+        $event = OverspeedEvent::firstOrNew(['shift_id' => $shift->shift_id]);
+
+        // Already logged a faster (or equal) top speed this shift — just note
+        // that they're still over the limit and stop.
+        if ($event->exists && $roundedSpeed <= (int) $event->top_speed) {
+            $event->last_logged_at = $now;
+            $event->save();
+            return;
+        }
+
+        $event->fill([
+            'conductor_id'   => $shift->conductor_id,
+            'driver_id'      => $shift->driver_id,
+            'vehicle_id'     => $shift->vehicle_id,
+            'conductor_name' => $shift->conductor_name,
+            'driver_name'    => $shift->driver_name,
+            'unit_number'    => $shift->unit_number,
+            'plate_number'   => $shift->plate_number,
+            'top_speed'      => $roundedSpeed,
+            'threshold'      => $threshold,
+            'date'           => $now->toDateString(),
+            'last_logged_at' => $now,
+        ])->save();
     }
 
     /**
@@ -258,50 +320,27 @@ class LocationService
     }
 
     /**
-     * Get vehicles currently exceeding the speed threshold.
-     * Returns vehicles with speed > threshold from vehicle_locations
-     * where the vehicle has an active shift.
-     *
-     * @param int|null $threshold Speed limit in km/h. If null, reads from
-     *                            the `speed_limit_kmh` setting (default 60).
+     * Persisted overspeeding history for the admin monitoring module.
+     * Returns one recorded incident per shift (its top speed over the limit),
+     * most recent first. Recorded live by recordOverspeed() on each GPS ping.
      */
-    public function getOverspeedingVehicles(?int $threshold = null): Collection
+    public function getOverspeedHistory(int $limit = 200): Collection
     {
-        // If no explicit threshold passed, read from the settings table.
-        if ($threshold === null) {
-            $threshold = (int) (Setting::where('key', 'speed_limit_kmh')->value('value') ?? 60);
-        }
-        return DB::table('vehicle_locations')
-            ->join('vehicles', 'vehicle_locations.vehicle_id', '=', 'vehicles.id')
-            ->whereNotNull('vehicles.active_shift_id')
-            ->where('vehicle_locations.speed', '>', $threshold)
-            ->leftJoin('shift_logs', function ($join) {
-                $join->on('vehicles.active_shift_id', '=', 'shift_logs.shift_id');
-            })
-            ->leftJoin('drivers', 'shift_logs.driver_id', '=', 'drivers.id')
-            ->select([
-                'vehicle_locations.vehicle_id as id',
-                'vehicles.unit_number',
-                'vehicles.plate_number',
-                'vehicle_locations.speed',
-                'vehicle_locations.lat',
-                'vehicle_locations.lng',
-                'vehicle_locations.updated_at as last_update',
-                'drivers.first_name as driver_first_name',
-                'drivers.last_name as driver_last_name',
-            ])
-            ->orderBy('vehicle_locations.speed', 'desc')
+        return OverspeedEvent::query()
+            ->orderByDesc('last_logged_at')
+            ->limit($limit)
             ->get()
-            ->map(function ($row) {
+            ->map(function (OverspeedEvent $e) {
                 return [
-                    'id'         => $row->id,
-                    'unit'       => $row->unit_number,
-                    'plate'      => $row->plate_number,
-                    'speed'      => (int) $row->speed,
-                    'lat'        => $row->lat ? (float) $row->lat : null,
-                    'lng'        => $row->lng ? (float) $row->lng : null,
-                    'driver'     => trim(($row->driver_first_name ?? '') . ' ' . ($row->driver_last_name ?? '')) ?: null,
-                    'last_update'=> $row->last_update,
+                    'id'          => (string) $e->id,
+                    'unit'        => $e->unit_number,
+                    'plate'       => $e->plate_number,
+                    'speed'       => (int) $e->top_speed,
+                    'threshold'   => (int) $e->threshold,
+                    'driver'      => $e->driver_name,
+                    'conductor'   => $e->conductor_name,
+                    'date'        => $e->date?->toDateString(),
+                    'last_update' => $e->last_logged_at?->toIso8601String(),
                 ];
             });
     }

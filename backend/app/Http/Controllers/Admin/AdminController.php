@@ -78,17 +78,15 @@ class AdminController extends Controller
     }
 
     /**
-     * GET /api/v1/admin/monitoring/overspeed?threshold=60
-     * Returns vehicles currently exceeding the speed threshold.
+     * GET /api/v1/admin/monitoring/overspeed
+     * Returns the persisted overspeeding history (one incident per shift,
+     * recorded live as vehicles exceed the speed limit).
      */
     public function overspeed(Request $request): JsonResponse
     {
-        // If the admin passes ?threshold=X, use that. Otherwise pass null
-        // so the LocationService reads from the settings table (speed_limit_kmh).
-        $threshold = $request->has('threshold') ? (int) $request->integer('threshold') : null;
-        $vehicles = $this->locationService->getOverspeedingVehicles($threshold);
+        $history = $this->locationService->getOverspeedHistory();
 
-        return $this->successResponse($vehicles, 'Overspeeding vehicles retrieved');
+        return $this->successResponse($history, 'Overspeeding history retrieved');
     }
 
     public function drivers(): JsonResponse

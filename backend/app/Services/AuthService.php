@@ -15,19 +15,34 @@ use Illuminate\Validation\ValidationException;
 class AuthService
 {
     /**
-     * Login with email or conductor generated_username.
+     * Login with email, conductor generated_username, or commuter username.
      * Single optimized query with eager-loaded profiles.
+     *
+     * A commuter can sign in with EITHER their email OR the username they
+     * chose at sign-up — both resolve to the same account. Conductors use
+     * their admin-generated username. The SoftDeletes scope on User already
+     * excludes rejected (soft-deleted) accounts, so a freed username reused
+     * by a new commuter resolves only to the live account.
      */
     public function login(string $login, string $password): array
     {
+        // Group the identity checks in a single closure so the SoftDeletes
+        // scope (deleted_at IS NULL) wraps the whole OR set — otherwise SQL
+        // precedence (AND binds tighter than OR) would let the orWhereHas
+        // branches match soft-deleted (rejected) accounts.
         $user = User::with([
             'adminProfile',
             'conductorProfile',
             'commuterProfile',
         ])
-            ->where('email', $login)
-            ->orWhereHas('conductorProfile', function ($q) use ($login) {
-                $q->where('generated_username', $login);
+            ->where(function ($q) use ($login) {
+                $q->where('email', $login)
+                    ->orWhereHas('conductorProfile', function ($qq) use ($login) {
+                        $qq->where('generated_username', $login);
+                    })
+                    ->orWhereHas('commuterProfile', function ($qq) use ($login) {
+                        $qq->where('username', $login);
+                    });
             })
             ->first();
 

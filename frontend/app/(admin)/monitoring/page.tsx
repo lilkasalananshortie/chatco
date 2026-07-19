@@ -334,14 +334,14 @@ export default function MonitoringPage() {
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead><tr className="border-b border-[#1E2D45]"><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Driver</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Speed</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Zone</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Logged</th></tr></thead>
+                  <thead><tr className="border-b border-[#1E2D45]"><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Driver</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Conductor</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Top Speed</th><th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Logged</th></tr></thead>
                   <tbody className="divide-y divide-[#1E2D45]">
                     {currentOverspeedData.map((log) => (
                       <tr key={log.id} className="hover:bg-[#0E1628] transition-colors opacity-70 hover:opacity-100">
                         <td className="py-3 pr-3"><span className="text-sm text-slate-300 font-semibold">{log.unit}</span></td>
                         <td className="py-3 pr-3"><span className="text-sm text-slate-400">{log.driver}</span></td>
+                        <td className="py-3 pr-3"><span className="text-sm text-slate-400">{log.conductor}</span></td>
                         <td className="py-3 pr-3 text-center"><span className="text-sm font-bold text-red-400">{log.speed} km/h</span></td>
-                        <td className="py-3 pr-3 hidden md:table-cell"><span className="text-xs text-slate-500">{log.zone}</span></td>
                         <td className="py-3"><span className="inline-flex items-center gap-1 text-xs text-amber-400/70 bg-amber-400/10 px-2 py-0.5 rounded-md"><Clock size={12} />{log.loggedAt}</span></td>
                       </tr>
                     ))}

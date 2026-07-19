@@ -14,6 +14,11 @@ export function middleware(request: NextRequest) {
       "/lost-found",
       "/analytics",
       "/settings",
+      // The /announcements page lives in the (admin) route group and is only
+      // linked from the admin notification bell. Commuters read announcements
+      // via a hook on their rewards page, not this route — so it must be
+      // ADMIN-guarded, otherwise admins get bounced to /login.
+      "/announcements",
     ],
     commuter: [
       "/dashboard",
@@ -21,7 +26,6 @@ export function middleware(request: NextRequest) {
       "/rewards",
       "/feedback",
       "/profile",
-      "/announcements",
       "/gcash/return",
     ],
     conductor: [

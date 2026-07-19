@@ -111,6 +111,7 @@ import type {
 } from "@/lib/conductor/types";
 import type { ConductorShift } from "@/lib/conductor/persistence/shift.store";
 import type { Transaction } from "@/lib/conductor/persistence/transactions.store";
+import type { RemittanceRecord } from "@/lib/conductor/persistence/remittance.store";
 import type { PaymentMethodType } from "@/types";
 
 // ─── Mappers ─────────────────────────────────────────────────────────
@@ -151,6 +152,49 @@ export function mapShiftLog(s: unknown): ConductorShift {
     timeIn: shift.time_in,
     timeOut: shift.time_out,
     isActive: shift.status === "ACTIVE",
+  };
+}
+
+/**
+ * Map a Laravel Remittance model (snake_case, decimals-as-strings) to the
+ * frontend's RemittanceRecord shape (camelCase). The conductor's
+ * remittance-history list (GET /conductor/remittances) returns these rows
+ * inside a paginator — the route unwraps the paginator, this maps each row.
+ *
+ * remittance_status: the backend writes 'COMPLETE' (no shortage) or
+ * 'SHORTAGE'; both mean the shift WAS remitted, so they map to "Remitted".
+ * Anything else (e.g. 'PENDING') maps to "Pending".
+ *
+ * time_in/time_out live on the related shift_log, not the remittance row.
+ */
+export function mapRemittance(r: unknown): RemittanceRecord {
+  const row = r as Record<string, unknown>;
+  const shift = (row.shift ?? null) as Record<string, unknown> | null;
+  const num = (v: unknown) => Number(v) || 0;
+  const status = String(row.remittance_status ?? "");
+
+  return {
+    shiftId: String(row.shift_id ?? ""),
+    date: String(row.date ?? ""),
+    conductorName: String(row.conductor_name ?? "—"),
+    driverName: String(row.driver_name ?? "—"),
+    unitNumber: String(row.unit_number ?? "—"),
+    totalPassengers: num(row.total_passengers),
+    cashlessBreakdown: {
+      gcashScanned: num(row.gcash_scanned_total),
+      gcashDirect: num(row.gcash_direct_total),
+      voucher: num(row.voucher_total),
+    },
+    totalCashless: num(row.total_cashless),
+    cashDeclared: num(row.cash_declared),
+    cashTotal: num(row.cash_total),
+    gcashTotal: num(row.gcash_total),
+    remittanceStatus:
+      status === "COMPLETE" || status === "SHORTAGE" || status === "Remitted"
+        ? "Remitted"
+        : "Pending",
+    timeIn: String(shift?.time_in ?? ""),
+    timeOut: String(shift?.time_out ?? ""),
   };
 }
 
