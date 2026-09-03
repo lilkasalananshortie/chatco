@@ -26,6 +26,8 @@ interface DriverDetail {
   birthday: string | null;
   contact: string;
   license_number: string;
+  license_front_image_url: string | null;
+  license_back_image_url: string | null;
   hire_date: string | null;
   profile_picture_url: string | null;
   status: string | null;
@@ -209,6 +211,30 @@ export function DriverDetailModal({ driver, onClose }: DriverDetailModalProps) {
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] text-slate-600 uppercase">License Number</p>
                     <p className="text-sm text-slate-300 truncate">{details.license_number || '—'}</p>
+                  </div>
+                </div>
+
+                {/* License Images */}
+                <div className="p-3 rounded-md bg-[#0E1628] border border-[#1E2D45]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <IdCard size={16} className="text-slate-500" />
+                    <p className="text-[10px] text-slate-600 uppercase">License Images</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ['front', 'Front', details.license_front_image_url],
+                      ['back', 'Back', details.license_back_image_url],
+                    ] as const).map(([side, label, storedPath]) => (
+                      <div key={side} className="min-w-0">
+                        <div className="h-24 rounded border border-dashed border-[#2A3A55] flex items-center justify-center overflow-hidden bg-[#131C2E]">
+                          {storedPath ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={`/api/admin/drivers/${details.id}/license-images/${side}`} alt={`${label} driver's license`} className="w-full h-full object-contain" />
+                          ) : <span className="text-[11px] text-slate-600">Not uploaded</span>}
+                        </div>
+                        <p className="text-[10px] text-slate-500 text-center mt-1">{label}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

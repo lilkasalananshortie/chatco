@@ -28,6 +28,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -375,6 +376,8 @@ class AdminController extends Controller
             'birthday' => $driver->birthday?->toDateString(),
             'contact' => $driver->contact,
             'license_number' => $driver->license_number,
+            'license_front_image_url' => $driver->license_front_image_url,
+            'license_back_image_url' => $driver->license_back_image_url,
             'hire_date' => $driver->hire_date?->toDateString(),
             'profile_picture_url' => $driver->profile_picture_url,
             'status' => $driver->status,
@@ -403,6 +406,121 @@ class AdminController extends Controller
         ];
 
         return $this->successResponse($data, 'Driver details retrieved');
+    }
+
+    /**
+     * POST /api/v1/admin/drivers/{id}/license-images
+     *
+     * Stores one or both sides of a driver's license on the configured
+     * private ID disk. The image itself is only served through the
+     * authenticated showDriverLicenseImage endpoint below.
+     */
+    public function uploadDriverLicenseImages(Request $request, string $id): JsonResponse
+    {
+        $driver = Driver::findOrFail($id);
+
+        $validated = $request->validate([
+            'front' => ['sometimes', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'back' => ['sometimes', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+        ]);
+
+        if (! isset($validated['front']) && ! isset($validated['back'])) {
+            return response()->json([
+                'success' => false,
+                'data' => null,
+                'message' => 'At least one license image is required.',
+                'errors' => ['license_images' => ['Upload a front or back license image.']],
+                'meta' => null,
+            ], 422);
+        }
+
+        $diskName = config('filesystems.uploads.private_id_disk', 'r2_private');
+        $disk = Storage::disk($diskName);
+        $oldPaths = [];
+        $newPaths = [];
+
+        DB::transaction(function () use ($driver, $validated, $diskName, &$oldPaths, &$newPaths): void {
+            foreach (['front', 'back'] as $side) {
+                if (! isset($validated[$side])) {
+                    continue;
+                }
+
+                $column = "license_{$side}_image_url";
+                $file = $validated[$side];
+                $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+                $path = $file->storeAs(
+                    "driver-licenses/{$driver->id}",
+                    "{$side}-".Str::uuid().".{$extension}",
+                    $diskName
+                );
+
+                $oldPaths[] = $driver->{$column};
+                $newPaths[] = $path;
+                $driver->update([$column => $path]);
+            }
+        });
+
+        foreach ($oldPaths as $oldPath) {
+            if ($oldPath && ! in_array($oldPath, $newPaths, true)) {
+                $disk->delete($oldPath);
+            }
+        }
+
+        $driver = $driver->fresh();
+
+        return $this->successResponse([
+            'id' => $driver->id,
+            'license_front_image_url' => $driver->license_front_image_url,
+            'license_back_image_url' => $driver->license_back_image_url,
+        ], 'License image(s) uploaded successfully');
+    }
+
+    /**
+     * DELETE /api/v1/admin/drivers/{id}/license-images/{side}
+     * Removes one side of a driver's license document.
+     */
+    public function destroyDriverLicenseImage(string $id, string $side): JsonResponse
+    {
+        abort_unless(in_array($side, ['front', 'back'], true), 404);
+
+        $driver = Driver::findOrFail($id);
+        $column = "license_{$side}_image_url";
+        $path = $driver->{$column};
+
+        if ($path) {
+            Storage::disk(config('filesystems.uploads.private_id_disk', 'r2_private'))->delete($path);
+            $driver->update([$column => null]);
+        }
+
+        return $this->successResponse(null, 'License image removed successfully');
+    }
+
+    /**
+     * GET /api/v1/admin/drivers/{id}/license-images/{side}
+     * Streams a license image to an authenticated admin only.
+     */
+    public function showDriverLicenseImage(string $id, string $side)
+    {
+        abort_unless(in_array($side, ['front', 'back'], true), 404);
+
+        $driver = Driver::findOrFail($id);
+        $path = $driver->{"license_{$side}_image_url"};
+        abort_if(! $path, 404);
+
+        $disk = Storage::disk(config('filesystems.uploads.private_id_disk', 'r2_private'));
+        abort_unless($disk->exists($path), 404);
+
+        $stream = $disk->readStream($path);
+        abort_unless(is_resource($stream), 404);
+
+        return response()->stream(function () use ($stream): void {
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type' => $disk->mimeType($path) ?: 'application/octet-stream',
+            'Content-Disposition' => 'inline',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     /**

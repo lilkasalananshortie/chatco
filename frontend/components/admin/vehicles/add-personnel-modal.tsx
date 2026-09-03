@@ -39,6 +39,8 @@ interface AddPersonnelModalProps {
 
 export function AddPersonnelModal({ isOpen, onClose, onSave }: AddPersonnelModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const licenseFrontInputRef = useRef<HTMLInputElement>(null);
+  const licenseBackInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -52,6 +54,10 @@ export function AddPersonnelModal({ isOpen, onClose, onSave }: AddPersonnelModal
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [useDefaultPicture, setUseDefaultPicture] = useState<boolean>(true);
+  const [licenseFrontFile, setLicenseFrontFile] = useState<File | null>(null);
+  const [licenseBackFile, setLicenseBackFile] = useState<File | null>(null);
+  const [licenseFrontPreview, setLicenseFrontPreview] = useState<string | null>(null);
+  const [licenseBackPreview, setLicenseBackPreview] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +97,36 @@ export function AddPersonnelModal({ isOpen, onClose, onSave }: AddPersonnelModal
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const handleLicenseImageChange = (side: 'front' | 'back', file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (side === 'front') {
+        setLicenseFrontFile(file);
+        setLicenseFrontPreview(reader.result as string);
+      } else {
+        setLicenseBackFile(file);
+        setLicenseBackPreview(reader.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadLicenseImages = async (driverId: string) => {
+    if (!licenseFrontFile && !licenseBackFile) return;
+
+    const body = new FormData();
+    if (licenseFrontFile) body.append('front', licenseFrontFile);
+    if (licenseBackFile) body.append('back', licenseBackFile);
+
+    const res = await fetch(`/api/admin/drivers/${driverId}/license-images`, {
+      method: 'POST',
+      body,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message ?? 'Failed to upload license image(s)');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,6 +186,9 @@ export function AddPersonnelModal({ isOpen, onClose, onSave }: AddPersonnelModal
       }
 
       // Success — reset form, trigger parent refetch, close modal.
+      const driverId = data.data?.id;
+      if (driverId) await uploadLicenseImages(String(driverId));
+
       setFormData({
         firstName: '',
         middleName: '',
@@ -161,6 +200,10 @@ export function AddPersonnelModal({ isOpen, onClose, onSave }: AddPersonnelModal
       setProfilePicture(null);
       setProfilePictureFile(null);
       setUseDefaultPicture(true);
+      setLicenseFrontFile(null);
+      setLicenseBackFile(null);
+      setLicenseFrontPreview(null);
+      setLicenseBackPreview(null);
       onSave();
       onClose();
     } catch (err) {
@@ -251,6 +294,37 @@ export function AddPersonnelModal({ isOpen, onClose, onSave }: AddPersonnelModal
                 </button>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Driver's License Images */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <IdCard size={14} className="text-slate-300" />
+            <p className="text-xs font-medium text-slate-300">Driver&apos;s License Images <span className="text-slate-500">(optional)</span></p>
+          </div>
+          <p className="text-[11px] text-slate-500">Upload clear photos of both sides for verification.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {([
+              ['front', 'Front', licenseFrontInputRef, licenseFrontPreview],
+              ['back', 'Back', licenseBackInputRef, licenseBackPreview],
+            ] as const).map(([side, label, inputRef, preview]) => (
+              <div key={side} className="rounded-lg border border-[#1E2D45] bg-[#0E1628] p-3">
+                <div className="h-24 rounded-md border border-dashed border-[#2A3A55] flex items-center justify-center overflow-hidden mb-2">
+                  {preview ? <img src={preview} alt={`${label} license preview`} className="w-full h-full object-contain" /> : <IdCard size={28} className="text-slate-600" />}
+                </div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => handleLicenseImageChange(side, e.target.files?.[0])}
+                  className="hidden"
+                />
+                <button type="button" onClick={() => inputRef.current?.click()} disabled={isSubmitting} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#131C2E] border border-[#1E2D45] rounded-md text-xs text-slate-300 hover:bg-[#1A2540] hover:text-white transition-colors disabled:opacity-50">
+                  <Upload size={14} /> {preview ? `Change ${label}` : `Upload ${label}`}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 

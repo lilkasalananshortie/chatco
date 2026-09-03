@@ -53,6 +53,8 @@ interface EditPersonnelModalProps {
  */
 export function EditPersonnelModal({ isOpen, onClose, onSaved, editingData }: EditPersonnelModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const licenseFrontInputRef = useRef<HTMLInputElement>(null);
+  const licenseBackInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -67,6 +69,12 @@ export function EditPersonnelModal({ isOpen, onClose, onSaved, editingData }: Ed
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [useDefaultPicture, setUseDefaultPicture] = useState<boolean>(true);
   const [existingPictureUrl, setExistingPictureUrl] = useState<string | null>(null);
+  const [licenseFrontFile, setLicenseFrontFile] = useState<File | null>(null);
+  const [licenseBackFile, setLicenseBackFile] = useState<File | null>(null);
+  const [licenseFrontPreview, setLicenseFrontPreview] = useState<string | null>(null);
+  const [licenseBackPreview, setLicenseBackPreview] = useState<string | null>(null);
+  const [removeLicenseFront, setRemoveLicenseFront] = useState(false);
+  const [removeLicenseBack, setRemoveLicenseBack] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingMeta, setIsLoadingMeta] = useState(false);
@@ -120,6 +128,16 @@ export function EditPersonnelModal({ isOpen, onClose, onSaved, editingData }: Ed
           setUseDefaultPicture(!raw.profile_picture_url);
           setProfilePicture(null);
           setProfilePictureFile(null);
+          setLicenseFrontFile(null);
+          setLicenseBackFile(null);
+          setLicenseFrontPreview(raw.license_front_image_url
+            ? `/api/admin/drivers/${editingData.id}/license-images/front`
+            : null);
+          setLicenseBackPreview(raw.license_back_image_url
+            ? `/api/admin/drivers/${editingData.id}/license-images/back`
+            : null);
+          setRemoveLicenseFront(false);
+          setRemoveLicenseBack(false);
         } else {
           setError(`Could not find this ${roleLabel.toLowerCase()} in the database. Please refresh the page and try again.`);
         }
@@ -161,6 +179,58 @@ export function EditPersonnelModal({ isOpen, onClose, onSaved, editingData }: Ed
     setExistingPictureUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleLicenseImageChange = (side: 'front' | 'back', file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (side === 'front') {
+        setLicenseFrontFile(file);
+        setLicenseFrontPreview(reader.result as string);
+        setRemoveLicenseFront(false);
+      } else {
+        setLicenseBackFile(file);
+        setLicenseBackPreview(reader.result as string);
+        setRemoveLicenseBack(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLicenseImage = (side: 'front' | 'back') => {
+    if (side === 'front') {
+      setLicenseFrontFile(null);
+      setLicenseFrontPreview(null);
+      setRemoveLicenseFront(true);
+      if (licenseFrontInputRef.current) licenseFrontInputRef.current.value = '';
+    } else {
+      setLicenseBackFile(null);
+      setLicenseBackPreview(null);
+      setRemoveLicenseBack(true);
+      if (licenseBackInputRef.current) licenseBackInputRef.current.value = '';
+    }
+  };
+
+  const syncLicenseImages = async (driverId: string) => {
+    if (licenseFrontFile || licenseBackFile) {
+      const body = new FormData();
+      if (licenseFrontFile) body.append('front', licenseFrontFile);
+      if (licenseBackFile) body.append('back', licenseBackFile);
+      const uploadRes = await fetch(`/api/admin/drivers/${driverId}/license-images`, {
+        method: 'POST',
+        body,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.message ?? 'Failed to upload license image(s)');
+    }
+
+    for (const [side, shouldRemove] of [['front', removeLicenseFront], ['back', removeLicenseBack]] as const) {
+      if (!shouldRemove) continue;
+      const removeRes = await fetch(`/api/admin/drivers/${driverId}/license-images/${side}`, { method: 'DELETE' });
+      const removeData = await removeRes.json();
+      if (!removeRes.ok) throw new Error(removeData.message ?? `Failed to remove license ${side} image`);
     }
   };
 
@@ -230,6 +300,8 @@ export function EditPersonnelModal({ isOpen, onClose, onSaved, editingData }: Ed
         }
         throw new Error(data.message ?? `Failed to update ${roleLabel.toLowerCase()}`);
       }
+
+      if (!isConductor) await syncLicenseImages(editingData.id);
 
       onSaved();
       onClose();
@@ -384,6 +456,42 @@ export function EditPersonnelModal({ isOpen, onClose, onSaved, editingData }: Ed
               className={`${inputClasses} ${fieldErrors.license_number ? 'border-red-500/50' : ''}`}
             />
             {fieldErrors.license_number && <p className="text-xs text-red-400 mt-1">{fieldErrors.license_number[0]}</p>}
+          </div>
+        )}
+
+        {!isConductor && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <IdCard size={14} className="text-slate-300" />
+              <p className="text-xs font-medium text-slate-300">Driver&apos;s License Images</p>
+            </div>
+            <p className="text-[11px] text-slate-500">Upload clear photos of both sides for verification.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                ['front', 'Front', licenseFrontInputRef, licenseFrontPreview],
+                ['back', 'Back', licenseBackInputRef, licenseBackPreview],
+              ] as const).map(([side, label, inputRef, preview]) => (
+                <div key={side} className="rounded-lg border border-[#1E2D45] bg-[#0E1628] p-3">
+                  <div className="h-24 rounded-md border border-dashed border-[#2A3A55] flex items-center justify-center overflow-hidden mb-2">
+                    {preview ? <img src={preview} alt={`${label} license preview`} className="w-full h-full object-contain" /> : <IdCard size={28} className="text-slate-600" />}
+                  </div>
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => handleLicenseImageChange(side, e.target.files?.[0])}
+                    className="hidden"
+                    disabled={isSubmitting || isLoadingMeta}
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => inputRef.current?.click()} disabled={isSubmitting || isLoadingMeta} className="flex-1 flex items-center justify-center gap-2 px-2 py-2 bg-[#131C2E] border border-[#1E2D45] rounded-md text-xs text-slate-300 hover:bg-[#1A2540] hover:text-white transition-colors disabled:opacity-50">
+                      <Upload size={14} /> {preview ? `Change ${label}` : `Upload ${label}`}
+                    </button>
+                    {preview && <button type="button" onClick={() => removeLicenseImage(side)} disabled={isSubmitting} className="px-2 py-2 text-xs text-red-400 border border-red-500/20 rounded-md hover:bg-red-500/10 disabled:opacity-50">Remove</button>}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

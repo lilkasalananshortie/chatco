@@ -273,6 +273,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:ADMIN'])->group(functi
     Route::get('/drivers', [AdminController::class, 'drivers'])->middleware('throttle:conductor-read');
     Route::post('/drivers', [AdminController::class, 'storeDriver'])->middleware('throttle:conductor-write');
     Route::get('/drivers/{id}', [AdminController::class, 'showDriver'])->middleware('throttle:conductor-read');
+    Route::post('/drivers/{id}/license-images', [AdminController::class, 'uploadDriverLicenseImages'])->middleware('throttle:conductor-write');
+    Route::delete('/drivers/{id}/license-images/{side}', [AdminController::class, 'destroyDriverLicenseImage'])->middleware('throttle:conductor-write');
+    Route::get('/drivers/{id}/license-images/{side}', [AdminController::class, 'showDriverLicenseImage'])->middleware('throttle:conductor-read');
     Route::put('/drivers/{id}', [AdminController::class, 'updateDriver'])->middleware('throttle:conductor-write');
     Route::patch('/drivers/{id}', [AdminController::class, 'updateDriver'])->middleware('throttle:conductor-write');
     Route::delete('/drivers/{id}', [AdminController::class, 'destroyDriver'])->middleware('throttle:conductor-write');
