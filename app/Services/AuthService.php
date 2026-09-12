@@ -159,10 +159,31 @@ class AuthService
                 }
             }
 
-            $lockedUser->tokens()->delete();
+            // --- Phase 3: Platform-scoped session isolation for conductors ---
+            // A conductor logging in on MOBILE must not revoke the active WEB
+            // token (and vice-versa), so each platform maintains its own token
+            // slot.  Only tokens belonging to the same platform are replaced.
+            //
+            // Rules:
+            //   • conductor + known deviceType  → delete same-platform tokens only
+            //   • conductor + null deviceType   → delete all tokens (legacy path,
+            //                                     keeps all existing AuthTests green)
+            //   • any other role                → delete all tokens (standard
+            //                                     single-session security)
+            if ($lockedUser->isConductor() && $deviceType !== null) {
+                $tokenName = 'auth-token:' . $deviceType;
+                $lockedUser->tokens()->where('name', $tokenName)->delete();
+            } else {
+                $lockedUser->tokens()->delete();
+                $deviceType = null; // force generic token name below
+            }
+
+            $tokenName = ($lockedUser->isConductor() && $deviceType !== null)
+                ? 'auth-token:' . $deviceType
+                : 'auth-token';
 
             return [
-                'token' => $lockedUser->createToken('auth-token')->plainTextToken,
+                'token' => $lockedUser->createToken($tokenName)->plainTextToken,
                 'handoff' => $handoff,
             ];
         }, 3);

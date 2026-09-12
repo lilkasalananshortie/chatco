@@ -238,4 +238,125 @@ class MobileWebTransactionIsolationTest extends TestCase
         // Verify only 1 row exists in database
         $this->assertEquals(1, Transaction::where('idempotency_key', 'batch-idemp-1')->count());
     }
+
+    // =========================================================================
+    // Phase 3 — Session & Device Lock Decoupling Tests
+    // =========================================================================
+
+    /**
+     * A WEB login must not revoke an active MOBILE token, and vice versa.
+     * Both platform tokens must remain valid simultaneously.
+     */
+    public function test_web_login_does_not_revoke_active_mobile_token(): void
+    {
+        // Conductor logs in on MOBILE first
+        $mobileResponse = $this->postJson('/api/v1/auth/login', [
+            'login'       => 'mreyes',
+            'password'    => 'password',
+            'device_id'   => 'mobile-11111111111111111',
+            'device_type' => 'MOBILE',
+        ])->assertOk();
+        $mobileToken = $mobileResponse->json('data.token');
+
+        // Conductor then logs in on WEB
+        $webResponse = $this->postJson('/api/v1/auth/login', [
+            'login'       => 'mreyes',
+            'password'    => 'password',
+            'device_id'   => 'web-2222222222222222222',
+            'device_type' => 'WEB',
+        ])->assertOk();
+        $webToken = $webResponse->json('data.token');
+
+        // Both tokens must be valid
+        $this->withHeader('Authorization', "Bearer {$mobileToken}")
+            ->getJson('/api/v1/user')
+            ->assertOk();
+
+        $this->withHeader('Authorization', "Bearer {$webToken}")
+            ->getJson('/api/v1/user')
+            ->assertOk();
+
+        // Conductor holds exactly 2 tokens (one per platform)
+        $this->assertSame(2, $this->conductor->tokens()->count());
+    }
+
+    /**
+     * A MOBILE login must not revoke an active WEB token.
+     */
+    public function test_mobile_login_does_not_revoke_active_web_token(): void
+    {
+        // Conductor logs in on WEB first
+        $webResponse = $this->postJson('/api/v1/auth/login', [
+            'login'       => 'mreyes',
+            'password'    => 'password',
+            'device_id'   => 'web-aaaaaaaaaaaaaaaaaaa',
+            'device_type' => 'WEB',
+        ])->assertOk();
+        $webToken = $webResponse->json('data.token');
+
+        // Conductor then logs in on MOBILE
+        $mobileResponse = $this->postJson('/api/v1/auth/login', [
+            'login'       => 'mreyes',
+            'password'    => 'password',
+            'device_id'   => 'mobile-bbbbbbbbbbbbbbbbbbb',
+            'device_type' => 'MOBILE',
+        ])->assertOk();
+        $mobileToken = $mobileResponse->json('data.token');
+
+        // WEB token must still be valid — Phase 3 isolation
+        $this->withHeader('Authorization', "Bearer {$webToken}")
+            ->getJson('/api/v1/user')
+            ->assertOk();
+
+        // MOBILE token is also valid
+        $this->withHeader('Authorization', "Bearer {$mobileToken}")
+            ->getJson('/api/v1/user')
+            ->assertOk();
+    }
+
+    /**
+     * A second MOBILE login must revoke only the first MOBILE token
+     * and must leave the WEB token completely untouched.
+     */
+    public function test_second_mobile_login_revokes_first_mobile_token_not_web_token(): void
+    {
+        // Login on WEB
+        $webResponse = $this->postJson('/api/v1/auth/login', [
+            'login'       => 'mreyes',
+            'password'    => 'password',
+            'device_id'   => 'web-cccccccccccccccccccc',
+            'device_type' => 'WEB',
+        ])->assertOk();
+        $webToken = $webResponse->json('data.token');
+
+        // Login on MOBILE (first device)
+        $this->postJson('/api/v1/auth/login', [
+            'login'       => 'mreyes',
+            'password'    => 'password',
+            'device_id'   => 'mobile-ddddddddddddddddddd',
+            'device_type' => 'MOBILE',
+        ])->assertOk();
+
+        // Login on MOBILE (second device — should revoke first MOBILE token only)
+        $mobile2Response = $this->postJson('/api/v1/auth/login', [
+            'login'       => 'mreyes',
+            'password'    => 'password',
+            'device_id'   => 'mobile-eeeeeeeeeeeeeeeeeee',
+            'device_type' => 'MOBILE',
+        ])->assertOk();
+        $mobileToken2 = $mobile2Response->json('data.token');
+
+        // Exactly 2 tokens remain: auth-token:WEB + auth-token:MOBILE (second device)
+        $this->assertSame(2, $this->conductor->tokens()->count());
+
+        // WEB token still valid
+        $this->withHeader('Authorization', "Bearer {$webToken}")
+            ->getJson('/api/v1/user')
+            ->assertOk();
+
+        // Second MOBILE token valid
+        $this->withHeader('Authorization', "Bearer {$mobileToken2}")
+            ->getJson('/api/v1/user')
+            ->assertOk();
+    }
 }
