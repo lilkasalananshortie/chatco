@@ -37,6 +37,40 @@ class CommuterVoucherWalletTest extends TestCase
         ], $overrides));
     }
 
+    public function test_mobile_wallet_matches_web_tabs_and_keeps_pagination_owned(): void
+    {
+        $own = [$this->voucher(), $this->voucher()];
+        $this->voucher(['status' => 'USED']);
+        $this->voucher(['status' => Voucher::STATUS_EXPIRED, 'expires_at' => now()->subDay()]);
+        $other = User::factory()->commuter()->create();
+        $this->voucher(['commuter_id' => $other->commuterProfile->id]);
+
+        foreach (['available', 'used', 'expired'] as $status) {
+            $query = '?status='.$status.'&per_page=1';
+            $web = $this->getJson('/api/v1/commuter/vouchers'.$query)->assertOk();
+            $mobile = $this->getJson('/api/v1/mobile/commuter/vouchers'.$query)->assertOk();
+            $this->assertSame($web->json('data'), $mobile->json('data'));
+        }
+
+        $first = $this->getJson('/api/v1/mobile/commuter/vouchers?status=available&per_page=1')
+            ->assertOk()->assertJsonCount(1, 'data.vouchers');
+        $cursor = $first->json('data.nextCursor');
+        $this->assertNotNull($cursor);
+        $second = $this->getJson('/api/v1/mobile/commuter/vouchers?status=available&per_page=1&cursor='.urlencode($cursor))
+            ->assertOk()->assertJsonCount(1, 'data.vouchers')->assertJsonPath('data.nextCursor', null);
+        $this->assertEqualsCanonicalizing(
+            array_map(fn (Voucher $voucher) => $voucher->id, $own),
+            [$first->json('data.vouchers.0.id'), $second->json('data.vouchers.0.id')],
+        );
+    }
+
+    public function test_mobile_wallet_validates_status_and_page_size(): void
+    {
+        $this->getJson('/api/v1/mobile/commuter/vouchers')->assertUnprocessable();
+        $this->getJson('/api/v1/mobile/commuter/vouchers?status=deleted')->assertUnprocessable();
+        $this->getJson('/api/v1/mobile/commuter/vouchers?status=available&per_page=51')->assertUnprocessable();
+    }
+
     public function test_tabs_paginate_with_a_cursor_without_skipping_or_repeating(): void
     {
         foreach (range(1, 5) as $i) {
