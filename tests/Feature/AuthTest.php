@@ -230,13 +230,12 @@ class AuthTest extends TestCase
             'device_type' => 'MOBILE',
         ])->assertOk();
 
-        // Phase 3: WEB token must be preserved — only auth-token:MOBILE was wiped
-        $this->assertDatabaseHas('personal_access_tokens', [
+        // The previous WEB session is revoked by the later MOBILE login.
+        $this->assertDatabaseMissing('personal_access_tokens', [
             'id' => $webToken->accessToken->id,
         ]);
 
-        // Conductor now holds 2 tokens: auth-token:WEB (unchanged) + auth-token:MOBILE (new)
-        $this->assertSame(2, $conductor->tokens()->count());
+        $this->assertSame(1, $conductor->tokens()->count());
 
         // Shift device handoff happened as usual
         $this->assertDatabaseHas('shift_logs', [
@@ -245,10 +244,10 @@ class AuthTest extends TestCase
             'operating_device_type' => 'MOBILE',
         ]);
 
-        // WEB token is still valid (no 401)
+        // The previous WEB session no longer authenticates.
         $this->withHeader('Authorization', "Bearer {$webPlainText}")
             ->getJson('/api/v1/user')
-            ->assertOk();
+            ->assertUnauthorized();
 
         // MOBILE token works for device-locked operations
         $this->withHeader('Authorization', "Bearer {$response->json('data.token')}")
@@ -290,7 +289,7 @@ class AuthTest extends TestCase
     public function test_active_shift_owner_can_log_in_again_on_the_same_device(): void
     {
         $conductor = $this->seedConductor();
-        // Use the real platform token name so Phase 3 scoping applies correctly
+        // Simulate a previous WEB session.
         $previousToken = $conductor->createToken('auth-token:WEB');
 
         ShiftLog::factory()->create([
@@ -308,7 +307,7 @@ class AuthTest extends TestCase
             'device_type' => 'WEB',
         ])->assertOk();
 
-        // Old auth-token:WEB must be gone (same-platform rotation)
+        // The previous conductor token must be gone after login.
         $this->assertDatabaseMissing('personal_access_tokens', [
             'id' => $previousToken->accessToken->id,
         ]);
