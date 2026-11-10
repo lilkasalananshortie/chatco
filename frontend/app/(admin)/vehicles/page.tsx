@@ -17,7 +17,8 @@ import { ConductorAccountSuccessModal } from '@/components/admin/vehicles/conduc
 import { DeleteVehicleModal } from '@/components/admin/vehicles/delete-vehicle-modal';
 import { OperationResultModal } from '@/components/admin/ui/operation-result-modal';
 import { remove as removeVehicle } from '@/lib/admin/services/vehicle.service';
-import { Users, Car, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, AlertCircle, RefreshCw } from 'lucide-react';
+import { JeepneyIcon } from '@/config/admin-nav';
 import { useVehiclesData } from './data/vehicles-data';
 import type { VehiclesQueryState, PersonnelRoleFilter, PersonnelStatusFilter, Vehicle, Personnel } from './data/vehicles-data';
 import { StickyPageHeader } from '@/components/admin/layout/sticky-page-header';
@@ -114,7 +115,7 @@ export default function VehiclesPage() {
   };
 
   const tabs = [
-    { id: 'vehicles' as const, label: 'Vehicles', count: counts.vehicles, icon: Car },
+    { id: 'vehicles' as const, label: 'Vehicles', count: counts.vehicles, icon: JeepneyIcon },
     { id: 'personnel' as const, label: 'Personnel', count: counts.personnel, icon: Users },
   ];
 

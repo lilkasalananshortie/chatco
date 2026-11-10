@@ -32,6 +32,26 @@ class MobileCommuterIsolationTest extends TestCase
         $this->assertEquals(14.81, \App\Models\SharedRideLink::first()->lat);
     }
 
+    public function test_current_share_link_is_returned_only_while_live_and_never_created(): void
+    {
+        Sanctum::actingAs($this->commuter);
+
+        // Nothing live: null, and the read must not mint a link.
+        $this->getJson('/api/v1/commuter/share-ride')->assertOk()->assertJsonPath('data', null);
+        $this->assertSame(0, \App\Models\SharedRideLink::count());
+
+        $token = $this->postJson('/api/v1/commuter/share-ride', ['rotate' => false])->assertCreated()->json('data.token');
+        $this->getJson('/api/v1/commuter/share-ride')->assertOk()->assertJsonPath('data.token', $token);
+        $this->getJson('/api/v1/mobile/commuter/share-ride')->assertOk()->assertJsonPath('data.token', $token);
+
+        \App\Models\SharedRideLink::query()->update(['expires_at' => now()->subMinute()]);
+        $this->getJson('/api/v1/commuter/share-ride')->assertOk()->assertJsonPath('data', null);
+
+        \App\Models\SharedRideLink::query()->update(['expires_at' => now()->addMinutes(10)]);
+        $this->deleteJson('/api/v1/commuter/share-ride')->assertOk();
+        $this->getJson('/api/v1/commuter/share-ride')->assertOk()->assertJsonPath('data', null);
+    }
+
     public function test_public_share_returns_profile_photo_only_while_link_is_live(): void
     {
         Sanctum::actingAs($this->commuter);

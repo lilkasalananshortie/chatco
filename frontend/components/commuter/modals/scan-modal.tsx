@@ -394,7 +394,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "verifying") {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="w-full max-w-xs bg-[#071A2E] light:bg-white rounded-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl p-8 text-center">
+        <div className="animate-fade-in w-full max-w-xs bg-[#071A2E] light:bg-white rounded-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl p-8 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full border-4 border-[#1C3350] light:border-gray-200 border-t-[#62A0EA] light:border-t-[#1A5FB4] animate-spin" />
           <h2 className="text-lg font-bold text-white light:text-gray-900 mb-2">
             Verifying Transaction
@@ -416,7 +416,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "voucher_offer" && claimResult && claimResult.seats.length > 1 && claimResult.availableVouchers.length > 0) {
     return (
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-        <div className="w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] overflow-y-auto">
+        <div className="animate-fade-in w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] overflow-y-auto">
           <GroupVoucherPicker
             claim={claimResult}
             onUse={(voucherIds) => void handleUseVoucher(voucherIds)}
@@ -430,7 +430,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "voucher_offer" && claimResult) {
     return (
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-        <div className="w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
+        <div className="animate-fade-in w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
           <div className="p-5 sm:p-6">
             <svg aria-hidden="true" className="w-9 h-9 mb-4 text-[#62A0EA] light:text-[#1A5FB4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.745 3.745 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
@@ -485,7 +485,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "redeeming_voucher") {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="w-full max-w-xs bg-[#071A2E] light:bg-white rounded-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl p-8 text-center">
+        <div className="animate-fade-in w-full max-w-xs bg-[#071A2E] light:bg-white rounded-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl p-8 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full border-4 border-[#1C3350] light:border-gray-200 border-t-[#62A0EA] light:border-t-[#1A5FB4] animate-spin" />
           <h2 className="text-lg font-bold text-white light:text-gray-900 mb-2">
             Redeeming Voucher
@@ -503,7 +503,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "confirm" && claimResult) {
     return (
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-        <div className="w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
+        <div className="animate-fade-in w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
           <div className="p-5 sm:p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -610,7 +610,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "redirecting") {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="w-full max-w-xs bg-[#071A2E] light:bg-white rounded-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl p-8 text-center">
+        <div className="animate-fade-in w-full max-w-xs bg-[#071A2E] light:bg-white rounded-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl p-8 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full border-4 border-[#1C3350] light:border-gray-200 border-t-[#62A0EA] light:border-t-[#1A5FB4] animate-spin" />
           <h2 className="text-lg font-bold text-white light:text-gray-900 mb-2">
             Redirecting to GCash
@@ -628,7 +628,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "success" && claimResult) {
     return (
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-        <div className="w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
+        <div className="animate-fade-in w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
           <div className="p-5 sm:p-6">
             <svg aria-hidden="true" className="w-9 h-9 mb-4 text-[#62A0EA] light:text-[#1A5FB4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -676,7 +676,7 @@ export default function ScanModal({ onClose }: ScanModalProps) {
   if (step === "failed") {
     return (
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-        <div className="w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
+        <div className="animate-fade-in w-full sm:max-w-sm bg-[#071A2E] light:bg-white sm:rounded-2xl rounded-t-2xl border border-[#1C3350] light:border-gray-200 shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
           <div className="p-5 sm:p-6">
             <svg aria-hidden="true" className="w-9 h-9 mb-4 text-[#F07171] light:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />

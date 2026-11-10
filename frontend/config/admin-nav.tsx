@@ -22,7 +22,7 @@ export interface NavItem {
 }
 
 /** The jeepney glyph the live maps use for units, sized like a Lucide icon. */
-function JeepneyIcon({ size = 24, className }: { size?: number; className?: string }) {
+export function JeepneyIcon({ size = 24, className }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path d={mdiJeepney} />

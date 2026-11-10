@@ -19,6 +19,34 @@ const FILTER_OPTIONS: { key: Exclude<RemittanceHistoryFilter, "date">; label: st
   { key: "month", label: "This Month" },
 ];
 
+/** Records in the chosen period. Shared by End-of-Day and Settings so both lists agree. */
+export function filterRemittanceHistory(history: RemittanceRecord[], filter: RemittanceHistoryFilter, dateFrom: string, dateTo: string): RemittanceRecord[] {
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const daysFromMonday = (startOfToday.getDay() + 6) % 7;
+  const weekStart = new Date(startOfToday);
+  weekStart.setDate(startOfToday.getDate() - daysFromMonday);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const monthStart = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
+
+  return history.filter((record) => {
+    const recordDate = String(record.date).slice(0, 10);
+    const date = new Date(`${recordDate}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return false;
+    if (filter === "today") return recordDate === startOfToday.toISOString().slice(0, 10);
+    if (filter === "last7") return date >= new Date(startOfToday.getTime() - 6 * 86400000) && date <= startOfToday;
+    if (filter === "week") return date >= weekStart && date <= weekEnd;
+    if (filter === "month") return date >= monthStart && date <= startOfToday;
+    if (filter === "date") {
+      if (dateFrom && dateTo) return recordDate >= dateFrom && recordDate <= dateTo;
+      const selectedDate = dateFrom || dateTo;
+      return selectedDate ? recordDate === selectedDate : true;
+    }
+    return true;
+  });
+}
+
 interface HistorySectionProps {
   showHistory: boolean;
   setShowHistory: (v: boolean) => void;

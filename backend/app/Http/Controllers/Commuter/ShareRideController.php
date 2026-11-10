@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
  * Commuter Share Ride Controller.
  *
  *   POST /api/v1/commuter/share-ride    → create a tracking link
+ *   GET  /api/v1/commuter/share-ride    → the commuter's live link, or null
  *   GET  /api/v1/share/{token}          → public: get the latest position
  *   DELETE /api/v1/commuter/share-ride  → deactivate the active link
  *
@@ -121,6 +122,35 @@ class ShareRideController extends Controller
             'expires_at' => $link->expires_at->toIso8601String(),
             'share_url' => rtrim(config('app.frontend_url'), '/')."/share/{$link->token}",
         ], $created ? 'Share link created' : 'Share link retrieved', $created ? 201 : 200);
+    }
+
+    /**
+     * GET /api/v1/commuter/share-ride
+     *
+     * The commuter's live link, or null. Lets the share modal open straight
+     * on the running link when it was started in another tab or device.
+     * Read-only: never creates a link (that stays an explicit POST).
+     */
+    public function current(Request $request): JsonResponse
+    {
+        $profile = $request->user()->commuterProfile;
+
+        if (! $profile) {
+            return $this->errorResponse('Commuter profile required.', 422);
+        }
+
+        // Served by the (commuter_id, is_active) index.
+        $link = SharedRideLink::where('commuter_id', $profile->id)
+            ->where('is_active', true)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first(['token', 'expires_at']);
+
+        return $this->successResponse($link ? [
+            'token' => $link->token,
+            'expires_at' => $link->expires_at->toIso8601String(),
+            'share_url' => rtrim(config('app.frontend_url'), '/')."/share/{$link->token}",
+        ] : null, $link ? 'Active share link' : 'No active share link');
     }
 
     /**

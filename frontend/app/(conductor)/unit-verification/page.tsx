@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ChevronLeft, Clock, LogOut } from "lucide-react";
-import { mdiJeepney } from "@mdi/js";
+import { ChartColumn, ChevronLeft, ChevronRight, Clock, LogOut, Settings, X } from "lucide-react";
+import minibusFront from "@/assets/minibus-front.svg";
 import { startShift } from "@/lib/conductor/services/shift.service";
 import { fetchRemittanceHistory, type RemittanceRecord } from "@/lib/conductor/services/remittance.service";
 import type { ConductorDriver, ConductorUnit } from "@/lib/conductor/types";
@@ -17,8 +17,20 @@ import { UnitVerificationSkeleton } from "@/components/conductor/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { useLightModeToggle } from "@/contexts/commuter-theme-context";
 import { ThemeToggleIcons } from "@/components/commuter/profile/profile-theme-toggle";
+import MetricsContent from "@/components/conductor/metrics/metrics-content";
+import SettingsContent from "@/components/conductor/settings/settings-content";
+import { APP_DIALOG as D } from "@/components/shared/app-dialog-styles";
 
 type Step = "select-unit" | "select-driver";
+type AccountView = "metrics" | "settings";
+
+// Same content as the Metrics and Settings tabs. Those tabs' own modals are
+// dock-anchored popovers, and this page has no dock, so it opens them in a
+// plain dialog instead.
+const ACCOUNT_VIEWS: Record<AccountView, { label: string; title: string; icon: typeof Settings }> = {
+  metrics: { label: "View all-time performance", title: "Performance Metrics", icon: ChartColumn },
+  settings: { label: "Account settings and photo", title: "Settings", icon: Settings },
+};
 
 export default function ConductorLoginPage() {
   const router = useRouter();
@@ -41,6 +53,7 @@ export default function ConductorLoginPage() {
   // Remitted shift the admin hasn't declared yet: no new shift until settled.
   const [awaitingDeclaration, setAwaitingDeclaration] = useState<RemittanceRecord | null>(null);
   const [isRechecking, setIsRechecking] = useState(false);
+  const [accountView, setAccountView] = useState<AccountView | null>(null);
 
   // Read fresh from the server, not the local history cache. Not Remitted
   // goes to End-of-Day to be remitted (oldest first there); a remitted but
@@ -156,6 +169,26 @@ export default function ConductorLoginPage() {
     await logout();
   };
 
+  const accountLinks = (
+    <div className="mb-4 shrink-0 space-y-2">
+      {(Object.keys(ACCOUNT_VIEWS) as AccountView[]).map((view) => {
+        const { label, icon: Icon } = ACCOUNT_VIEWS[view];
+        return (
+          <button
+            key={view}
+            type="button"
+            onClick={() => setAccountView(view)}
+            className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[#1C3350] light:border-gray-200 bg-[#0B1E33] light:bg-white px-4 py-3 text-left transition-colors hover:bg-[#10273F] light:hover:bg-gray-100 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1A5FB4]"
+          >
+            <Icon size={20} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-slate-400 light:text-gray-500" />
+            <span className="min-w-0 flex-1 text-sm font-medium text-slate-300 light:text-gray-700">{label}</span>
+            <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-slate-500 light:text-gray-400" />
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="h-[100dvh] overflow-hidden bg-[#050F1A] light:bg-gray-50 flex flex-col">
       <div className="relative flex min-h-0 flex-1 flex-col px-4 py-4 sm:py-6 max-w-md lg:max-w-lg mx-auto w-full">
@@ -249,6 +282,7 @@ export default function ConductorLoginPage() {
                 Choose the vehicle unit assigned to you for this shift.
               </p>
             </div>
+            {accountLinks}
             {selectionError && (
               <p role="alert" className="mb-3 shrink-0 rounded-xl border border-[#5C1F27] light:border-red-200 bg-[#2B1116] light:bg-red-50 px-4 py-2.5 text-xs font-medium text-red-300 light:text-red-700">
                 {selectionError}
@@ -278,11 +312,11 @@ export default function ConductorLoginPage() {
               </div>
             </div>
 
+            {accountLinks}
+
             {selectedUnit && (
               <div className="mb-4 flex shrink-0 items-center gap-3 border-y border-[#1C3350] light:border-gray-200 py-3">
-                <svg className="h-8 w-8 shrink-0 text-[#62A0EA] light:text-[#1A5FB4]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d={mdiJeepney} />
-                </svg>
+                <Image src={minibusFront} alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 light:text-gray-500">Your unit</p>
                   <p className="text-sm font-semibold text-white light:text-gray-900">
@@ -324,6 +358,25 @@ export default function ConductorLoginPage() {
         onConfirm={handleConfirmShift}
         onCancel={() => { setShowConfirmModal(false); setSubmitError(null); }}
       />
+
+      {accountView && (
+        <div className={D.overlay} onClick={(e) => { if (e.target === e.currentTarget) setAccountView(null); }}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="account-view-title"
+            className={`${D.panel} animate-fade-in ${accountView === "metrics" ? "max-w-3xl" : "max-w-lg"}`}
+          >
+            <div className={`sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-[#0B1E33] light:bg-white px-5 py-4 ${D.hairline}`}>
+              <h2 id="account-view-title" className={D.title}>{ACCOUNT_VIEWS[accountView].title}</h2>
+              <button type="button" onClick={() => setAccountView(null)} aria-label="Close" className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-[#10273F] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] light:text-gray-400 light:hover:bg-gray-100 light:hover:text-gray-900">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {accountView === "metrics" ? <MetricsContent showHeader={false} /> : <SettingsContent showHeader={false} showSignOut={false} />}
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes fade-in {

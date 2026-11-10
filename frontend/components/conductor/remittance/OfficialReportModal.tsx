@@ -258,6 +258,28 @@ export function buildPrintHTML(report: RemittanceRecord, route: string): string 
 </html>`;
 }
 
+/** Print a remittance report through a hidden iframe. Shared by End-of-Day and Settings. */
+export function printRemittanceReport(record: RemittanceRecord, route: string) {
+  const html = buildPrintHTML(record, route);
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "none";
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (doc) { doc.open(); doc.write(html); doc.close(); }
+  iframe.onload = () => {
+    setTimeout(() => {
+      try { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); }
+      catch { const pw = window.open("", "_blank"); if (pw) { pw.document.write(html); pw.document.close(); pw.onload = () => { pw.print(); pw.close(); }; } }
+      setTimeout(() => { if (iframe.parentNode) document.body.removeChild(iframe); }, 1000);
+    }, 300);
+  };
+}
+
 export default function OfficialReportModal({ show, onClose, activeReport, route }: OfficialReportModalProps) {
   if (!show) return null;
 

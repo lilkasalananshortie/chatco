@@ -14,10 +14,10 @@ import { getPendingCashTransactions } from "@/lib/conductor/persistence/transact
 import { useRemittanceData } from "@/app/(conductor)/hooks/use-remittance-data";
 import { fmt } from "@/app/(conductor)/conductor-dashboard/end-of-day/helpers";
 
-import HistorySection, { type RemittanceHistoryFilter } from "@/components/conductor/remittance/HistorySection";
+import HistorySection, { filterRemittanceHistory, type RemittanceHistoryFilter } from "@/components/conductor/remittance/HistorySection";
 import ConfirmModal from "@/components/conductor/remittance/ConfirmModal";
 import SuccessOverlay from "@/components/conductor/remittance/SuccessOverlay";
-import OfficialReportModal, { buildPrintHTML } from "@/components/conductor/remittance/OfficialReportModal";
+import OfficialReportModal, { printRemittanceReport } from "@/components/conductor/remittance/OfficialReportModal";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 
 /**
@@ -141,32 +141,10 @@ export default function EndOfDayContent() {
     await logout();
   };
 
-  const filteredHistory = useMemo(() => {
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const daysFromMonday = (startOfToday.getDay() + 6) % 7;
-    const weekStart = new Date(startOfToday);
-    weekStart.setDate(startOfToday.getDate() - daysFromMonday);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    const monthStart = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
-
-    return history.filter((record) => {
-      const recordDate = String(record.date).slice(0, 10);
-      const date = new Date(`${recordDate}T00:00:00`);
-      if (Number.isNaN(date.getTime())) return false;
-      if (historyFilter === "today") return recordDate === startOfToday.toISOString().slice(0, 10);
-      if (historyFilter === "last7") return date >= new Date(startOfToday.getTime() - 6 * 86400000) && date <= startOfToday;
-      if (historyFilter === "week") return date >= weekStart && date <= weekEnd;
-      if (historyFilter === "month") return date >= monthStart && date <= startOfToday;
-      if (historyFilter === "date") {
-        if (historyDateFrom && historyDateTo) return recordDate >= historyDateFrom && recordDate <= historyDateTo;
-        const selectedDate = historyDateFrom || historyDateTo;
-        return selectedDate ? recordDate === selectedDate : true;
-      }
-      return true;
-    });
-  }, [history, historyFilter, historyDateFrom, historyDateTo]);
+  const filteredHistory = useMemo(
+    () => filterRemittanceHistory(history, historyFilter, historyDateFrom, historyDateTo),
+    [history, historyFilter, historyDateFrom, historyDateTo],
+  );
 
   const activeReport = reportForRecord || {
     shiftId: shiftInfo.shiftId,
@@ -320,26 +298,7 @@ export default function EndOfDayContent() {
 
   const openOfficialReport = (record?: RemittanceRecord) => { setReportForRecord(record || null); if (!record) setReportForRecord({ ...activeReport, remittanceStatus: hasRemittedToday ? "For Cash Declaration" : "Pending" }); setShowOfficialReport(true); };
 
-  const printReport = (record: RemittanceRecord) => {
-    const html = buildPrintHTML(record, shiftInfo.route);
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "none";
-    document.body.appendChild(iframe);
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (doc) { doc.open(); doc.write(html); doc.close(); }
-    iframe.onload = () => {
-      setTimeout(() => {
-        try { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); }
-        catch { const pw = window.open("", "_blank"); if (pw) { pw.document.write(html); pw.document.close(); pw.onload = () => { pw.print(); pw.close(); }; } }
-        setTimeout(() => { if (iframe.parentNode) document.body.removeChild(iframe); }, 1000);
-      }, 300);
-    };
-  };
+  const printReport = (record: RemittanceRecord) => printRemittanceReport(record, shiftInfo.route);
 
   if (status === "loading") {
     return (

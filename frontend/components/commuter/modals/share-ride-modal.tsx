@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AlertTriangle, Check, CheckCircle2, Loader2, MapPin, X } from "lucide-react";
 import { APP_DIALOG as D } from "@/components/shared/app-dialog-styles";
 import { useAuth } from "@/contexts/auth-context";
@@ -23,10 +23,68 @@ interface ShareRideModalProps {
 
 export default function ShareRideModal({ commuterName, lat: propLat, lng: propLng, onClose }: ShareRideModalProps) {
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  // `error` is a Stop sharing failure on the live view; `createError` keeps the
+  // intro on screen so Generate link doubles as retry.
   const [error, setError] = useState<string | null>(null);
-  const [shareUrl, setShareUrl] = useState<string>("");
-  const [expiresAt, setExpiresAt] = useState<string>("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  // Reopened mid-share: show the live link straight away (same URL family already has).
+  const [shareUrl, setShareUrl] = useState<string>(() => {
+    const active = getActiveShareLink();
+    return active ? `${window.location.origin}/share/${active.token}` : "";
+  });
+  const [expiresAt, setExpiresAt] = useState<string>(() => getActiveShareLink()?.expiresAt ?? "");
+  // Only blocks the view when this tab has nothing to show yet; a local link
+  // renders at once and is reconciled in the background.
+  const [isChecking, setIsChecking] = useState(() => !getActiveShareLink());
+  const mountedRef = useRef(true);
+  // Set by Generate / Stop so a slower account check can't overwrite their result.
+  const userActedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // ── Account check: a link started in another tab or device opens on the
+  // live view, and one stopped elsewhere drops this tab back to the intro. ──
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/commuter/share-ride", { headers: { Accept: "application/json" }, cache: "no-store" });
+        // Unknown state: keep what's shown. Generate link reuses a live link anyway (rotate:false).
+        if (!res.ok) return;
+        const live: { token: string; expires_at: string } | null = (await res.json())?.data ?? null;
+        if (cancelled || userActedRef.current) return;
+
+        const local = getActiveShareLink();
+        if (live) {
+          if (local?.token !== live.token) {
+            // Push from this device too, as Generate link would have.
+            beginShareTracking();
+            attachShareLink(live.token, live.expires_at, user?.id ?? "");
+          }
+          setShareUrl(`${window.location.origin}/share/${live.token}`);
+          setExpiresAt(live.expires_at);
+          setIsExpired(false);
+        } else if (local) {
+          stopShareTracking();
+          setShareUrl("");
+          setExpiresAt("");
+        }
+      } catch {
+        // Offline: same as a failed check.
+      } finally {
+        if (!cancelled) setIsChecking(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
@@ -38,66 +96,58 @@ export default function ShareRideModal({ commuterName, lat: propLat, lng: propLn
   // after this modal closes (lib/commuter/share-ride-tracker.ts).
   useEffect(() => subscribeShareGpsStatus(setGpsStatus), []);
 
-  // ── Create (or reuse) the share link on mount ──
-  useEffect(() => {
+  // ── Create (or reuse) the share link when the commuter taps Generate link ──
+  // Closing the modal afterwards only stops this view. Position pushes carry on
+  // until Stop sharing or expiry, so the viewer's map keeps moving.
+  const handleGenerate = useCallback(async () => {
+    if (isLoading) return;
+    userActedRef.current = true;
     const ownerId = user?.id;
-    let cancelled = false;
+    setIsLoading(true);
+    setCreateError(null);
 
-    const createLink = async () => {
-      setIsLoading(true);
-      setError(null);
+    // Start GPS in parallel with link creation; the tracker holds the first
+    // fix and sends it as soon as the link exists.
+    beginShareTracking();
 
-      // Start GPS in parallel with link creation; the tracker holds the first
-      // fix and sends it as soon as the link exists.
-      beginShareTracking();
-
-      try {
-        // rotate:false reuses the commuter's active link, so reopening the
-        // modal mid-share keeps the URL already sent to family.
-        const res = await fetch("/api/commuter/share-ride", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            lat: propLat ?? undefined,
-            lng: propLng ?? undefined,
-            rotate: false,
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => null);
-          throw new Error(body?.message ?? "Failed to create share link.");
-        }
-
-        const json = await res.json();
-        const data = json.data;
-        if (cancelled) {
-          // Closed before the URL was ever shown, so nobody has this link to
-          // watch — unless it was already live from an earlier open.
-          if (!getActiveShareLink()) stopShareTracking();
-          return;
-        }
-        attachShareLink(data.token, data.expires_at, ownerId ?? "");
-        // Always construct the share URL using the frontend's origin (port 3000).
-        setShareUrl(`${window.location.origin}/share/${data.token}`);
-        setExpiresAt(data.expires_at);
-      } catch (err) {
-        // No link to push to — don't leave GPS running for nothing.
-        if (!getActiveShareLink()) stopShareTracking();
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to create share link.");
-      } finally {
-        if (!cancelled) setIsLoading(false);
+    try {
+      // rotate:false reuses the commuter's active link (e.g. after a reload
+      // in another tab), so the URL already sent to family keeps working.
+      const res = await fetch("/api/commuter/share-ride", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          lat: propLat ?? undefined,
+          lng: propLng ?? undefined,
+          rotate: false,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message ?? "Failed to create share link.");
       }
-    };
 
-    void createLink();
-
-    // Closing the modal only stops this view. Position pushes carry on until
-    // Stop sharing or expiry, so the viewer's map keeps moving.
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      const json = await res.json();
+      const data = json.data;
+      if (!mountedRef.current) {
+        // Closed before the URL was ever shown, so nobody has this link to
+        // watch — unless it was already live from an earlier open.
+        if (!getActiveShareLink()) stopShareTracking();
+        return;
+      }
+      attachShareLink(data.token, data.expires_at, ownerId ?? "");
+      // Always construct the share URL using the frontend's origin (port 3000).
+      setShareUrl(`${window.location.origin}/share/${data.token}`);
+      setExpiresAt(data.expires_at);
+      setIsExpired(false);
+    } catch (err) {
+      // No link to push to — don't leave GPS running for nothing.
+      if (!getActiveShareLink()) stopShareTracking();
+      if (mountedRef.current) setCreateError(err instanceof Error ? err.message : "Failed to create share link.");
+    } finally {
+      if (mountedRef.current) setIsLoading(false);
+    }
+  }, [isLoading, user?.id, propLat, propLng]);
 
   // ── Countdown timer ──
   useEffect(() => {
@@ -143,6 +193,7 @@ export default function ShareRideModal({ commuterName, lat: propLat, lng: propLn
 
   const handleStopSharing = useCallback(async () => {
     if (isStopping) return;
+    userActedRef.current = true;
     setIsStopping(true);
     try {
       const response = await fetch("/api/commuter/share-ride", { method: "DELETE" });
@@ -173,10 +224,10 @@ export default function ShareRideModal({ commuterName, lat: propLat, lng: propLn
         <div className="space-y-5 p-5 sm:p-6">
           <h2 id="share-ride-title" className={`${D.title} pr-10`}>Share live location</h2>
 
-          {isLoading ? (
+          {isChecking ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10">
               <Loader2 className={`h-8 w-8 animate-spin ${D.blueIcon}`} aria-hidden="true" />
-              <p className={`text-sm ${D.muted}`}>Creating your share link…</p>
+              <p className={`text-sm ${D.muted}`}>Checking for an active link…</p>
             </div>
           ) : isStopped ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -191,6 +242,29 @@ export default function ShareRideModal({ commuterName, lat: propLat, lng: propLn
                 {error}
               </p>
               <button type="button" onClick={onClose} className={`${D.button} ${D.secondary} w-full`}>Close</button>
+            </div>
+          ) : !shareUrl ? (
+            <div className="space-y-4">
+              <p className={`text-sm leading-relaxed ${D.muted}`}>
+                Generate a link that shows your live location on the map. Anyone with it can follow your ride for 30 minutes.{" "}
+                <span className="font-semibold text-white/90 light:text-gray-800">Only send it to people you trust.</span>
+              </p>
+
+              {createError && (
+                <p role="alert" className={`flex items-start gap-2 text-sm leading-relaxed ${D.redText}`}>
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  {createError}
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
+                <button type="button" onClick={onClose} className={`${D.button} ${D.secondary}`}>Cancel</button>
+                <button type="button" onClick={handleGenerate} disabled={isLoading} aria-busy={isLoading} className={`${D.button} ${D.primary}`}>
+                  {isLoading
+                    ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />Generating…</>
+                    : createError ? "Try again" : "Generate link"}
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -244,15 +318,31 @@ export default function ShareRideModal({ commuterName, lat: propLat, lng: propLn
                 Keep this app open for live updates.
               </p>
 
+              {isExpired && createError && (
+                <p role="alert" className={`flex items-start gap-2 text-sm leading-relaxed ${D.redText}`}>
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  {createError}
+                </p>
+              )}
+
               <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
-                {!isExpired && (
-                  <button type="button" onClick={handleStopSharing} disabled={isStopping} className={`${D.button} ${D.dangerSecondary}`}>
-                    {isStopping ? "Stopping…" : "Stop sharing"}
-                  </button>
+                {isExpired ? (
+                  <>
+                    <button type="button" onClick={onClose} className={`${D.button} ${D.secondary}`}>Close</button>
+                    <button type="button" onClick={handleGenerate} disabled={isLoading} aria-busy={isLoading} className={`${D.button} ${D.primary}`}>
+                      {isLoading
+                        ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />Generating…</>
+                        : "Generate new link"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={handleStopSharing} disabled={isStopping} className={`${D.button} ${D.dangerSecondary}`}>
+                      {isStopping ? "Stopping…" : "Stop sharing"}
+                    </button>
+                    <button type="button" onClick={onClose} className={`${D.button} ${D.primary}`}>Keep sharing</button>
+                  </>
                 )}
-                <button type="button" onClick={onClose} className={`${D.button} ${isExpired ? `${D.secondary} min-[360px]:col-span-2` : D.primary}`}>
-                  {isExpired ? "Close" : "Keep sharing"}
-                </button>
               </div>
             </>
           )}

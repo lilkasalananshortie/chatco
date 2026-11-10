@@ -1,8 +1,7 @@
 // components/admin/ui/page-tabs.tsx
 'use client';
 
-import { useRef, type KeyboardEvent } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { useRef, type ComponentType, type KeyboardEvent } from 'react';
 
 export type PageTabAccent = 'blue' | 'amber' | 'red';
 
@@ -10,7 +9,8 @@ export interface PageTab<T extends string> {
   id: T;
   label: string;
   count?: number;
-  icon: LucideIcon;
+  /** Any lucide icon, or a custom glyph taking the same props (e.g. admin-nav's JeepneyIcon). */
+  icon: ComponentType<{ size?: number; className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
   /** Underline/icon color when active. Blue by default; amber/red mark
    *  tabs whose content needs attention (pending, rejected, records). */
   accent?: PageTabAccent;

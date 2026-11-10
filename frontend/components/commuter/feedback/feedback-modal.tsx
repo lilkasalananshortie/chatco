@@ -16,7 +16,7 @@ export function FeedbackModalFrame({ label, children }: { label: string; childre
         role="dialog"
         aria-modal="true"
         aria-label={label}
-        className="w-full max-w-sm max-h-[88vh] rounded-2xl border border-white/10 light:border-gray-200 shadow-2xl overflow-hidden"
+        className="animate-fade-in w-full max-w-sm max-h-[88vh] rounded-2xl border border-white/10 light:border-gray-200 shadow-2xl overflow-hidden"
       >
         {children}
       </div>

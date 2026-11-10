@@ -12,6 +12,9 @@ import { uploadConductorProfilePhoto } from "@/lib/conductor/services/profile.se
 import ProfilePhoto from "@/components/commuter/profile/profile-photo";
 import { SettingsSkeleton } from "@/components/conductor/ui/skeleton";
 import type { SignOutControl } from "@/components/commuter/profile/account-menu";
+import HistorySection, { filterRemittanceHistory, type RemittanceHistoryFilter } from "@/components/conductor/remittance/HistorySection";
+import OfficialReportModal, { printRemittanceReport } from "@/components/conductor/remittance/OfficialReportModal";
+import type { RemittanceRecord } from "@/lib/conductor/services/remittance.service";
 
 export const LOGOUT_LOCKED_HINT = "Remit all pending collections before signing out.";
 
@@ -19,7 +22,7 @@ export const LOGOUT_LOCKED_HINT = "Remit all pending collections before signing 
  * The actual Settings body — everything except page chrome (the outer
  * sidebar-clearance wrapper, which only makes sense for the full page, not
  * the xl:+ popover — see ConductorSettingsModal). Extracted so the business
- * logic (profile fetch, active assignment, the
+ * logic (profile fetch, past shifts, the
  * remittance-gated logout flow) has exactly one implementation shared by
  * both:
  *   - the full page (app/(conductor)/conductor-dashboard/conductor-settings/page.tsx),
@@ -38,8 +41,11 @@ export const LOGOUT_LOCKED_HINT = "Remit all pending collections before signing 
  * @param onSignOutControl Given by shells that show AccountMenu in their
  * header (lg:+): receives the confirm trigger and remittance lock, and the
  * bottom Log Out button is hidden at lg:+ so it isn't shown twice.
+ *
+ * @param showSignOut False when the caller's page already has its own Sign
+ * out (unit verification), so the bottom button isn't shown at all.
  */
-export default function SettingsContent({ showHeader = true, onSignOutControl }: { showHeader?: boolean; onSignOutControl?: (control: SignOutControl | null) => void }) {
+export default function SettingsContent({ showHeader = true, onSignOutControl, showSignOut = true }: { showHeader?: boolean; onSignOutControl?: (control: SignOutControl | null) => void; showSignOut?: boolean }) {
   const { user, logout } = useAuth();
   const profileHeadingId = useId();
   const detailsHeadingId = useId();
@@ -50,6 +56,19 @@ export default function SettingsContent({ showHeader = true, onSignOutControl }:
   const conductorProfile = useConductorProfile();
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Past shifts: same filters and defaults as End-of-Day, but open by default.
+  const [showHistory, setShowHistory] = useState(true);
+  const [historyFilter, setHistoryFilter] = useState<RemittanceHistoryFilter>("week");
+  const [historyDateFrom, setHistoryDateFrom] = useState("");
+  const [historyDateTo, setHistoryDateTo] = useState("");
+  const [reportRecord, setReportRecord] = useState<RemittanceRecord | null>(null);
+  const filteredHistory = useMemo(
+    () => filterRemittanceHistory(history, historyFilter, historyDateFrom, historyDateTo),
+    [history, historyFilter, historyDateFrom, historyDateTo],
+  );
+  // Records carry no route; End-of-Day prints the current shift's, so match it.
+  const reportRoute = shift?.route || "—";
 
   // ── DEBUG ONLY ──────────────────────────────────────────────────
   // Conductors normally cannot self-logout: remittance is what closes out an
@@ -183,59 +202,28 @@ export default function SettingsContent({ showHeader = true, onSignOutControl }:
         </dl>
       </section>
 
-      {/* ===== Active Assignment ===== */}
-      <section className="bg-[#0B223A] light:bg-white border border-white/[0.06] light:border-gray-200 rounded-2xl p-4 lg:p-6">
-        <h2 className="text-[10px] uppercase tracking-wider font-semibold text-white/40 light:text-gray-500 mb-4">
-          Active Assignment
-        </h2>
-
-        {shift ? (
-          <div className="space-y-3">
-            {(
-              [
-                { label: "Current Unit", value: shift.unitNumber },
-                { label: "Assigned Driver", value: shift.driverName },
-              ] as const
-            ).map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between bg-[#071A2E] light:bg-gray-50 border border-white/[0.06] light:border-gray-200 rounded-xl px-4 py-3"
-              >
-                <span className="text-xs text-white/40 light:text-gray-600 font-medium">
-                  {item.label}
-                </span>
-                <span className="text-sm text-white light:text-gray-900 font-semibold">
-                  {item.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="w-14 h-14 rounded-full bg-white/[0.03] light:bg-gray-50 border border-white/[0.06] light:border-gray-200 flex items-center justify-center mb-3">
-              <svg
-                className="w-6 h-6 text-white/15 light:text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
-                />
-              </svg>
-            </div>
-            <p className="text-sm text-white/25 light:text-gray-600 font-medium">No active shift</p>
-            <p className="text-xs text-white/15 light:text-gray-500 mt-1">
-              Start a shift to see assignment details
-            </p>
-          </div>
-        )}
-      </section>
+      {/* ===== Past shifts — the same list as End-of-Day's Remittance History ===== */}
+      <HistorySection
+        showHistory={showHistory}
+        setShowHistory={setShowHistory}
+        filteredHistory={filteredHistory}
+        historyFilter={historyFilter}
+        setHistoryFilter={setHistoryFilter}
+        historyDateFrom={historyDateFrom}
+        setHistoryDateFrom={setHistoryDateFrom}
+        historyDateTo={historyDateTo}
+        setHistoryDateTo={setHistoryDateTo}
+        openOfficialReport={(record) => setReportRecord(record ?? null)}
+        onPrintReport={(record) => printRemittanceReport(record, reportRoute)}
+      />
+      {/* Portaled for the same reason as the logout confirmation below. */}
+      {reportRecord && createPortal(
+        <OfficialReportModal show onClose={() => setReportRecord(null)} activeReport={reportRecord} route={reportRoute} />,
+        document.body,
+      )}
 
       {/* ===== Logout (Bottom of scroll for both Mobile & Desktop) ===== */}
+      {showSignOut && (
       <div className={`pt-6 border-t border-white/[0.06] light:border-gray-200 ${onSignOutControl ? "lg:hidden" : ""}`}>
         {logoutLocked && (
           <div className="flex items-center justify-center gap-1.5 mb-3">
@@ -280,6 +268,7 @@ export default function SettingsContent({ showHeader = true, onSignOutControl }:
           </span>
         </button>
       </div>
+      )}
 
       {/* ===== Logout Confirmation Modal ===== */}
       {/* Portaled to <body>: inside the xl:+ Settings popover, this component
