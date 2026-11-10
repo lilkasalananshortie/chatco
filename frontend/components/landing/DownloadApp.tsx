@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowUpRight, Download, Smartphone } from "lucide-react";
 import logo from "../../assets/logo-transparent.png";
 
+const APK_URL = process.env.NEXT_PUBLIC_APK_URL;
+
 const INSTALL_STEPS = [
   { title: "Download the APK", description: "Save the E-CHATCO app to your Android phone." },
   { title: "Open and install", description: "Open the downloaded file and follow the installation prompts." },
@@ -24,12 +26,25 @@ export default function DownloadApp() {
             Hail a jeepney, pay your fare, and follow your trip. Download E-CHATCO on your Android phone and take it with you.
           </p>
           <div className="mt-8">
-            <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full bg-[#1A5FB4]/60 px-6 py-3.5 text-sm font-bold text-white">
-              <Download size={18} aria-hidden="true" /> APK coming soon
-            </button>
-            <p className="mt-3 text-sm text-gray-500">
-              The Android download will be available here soon.
-            </p>
+            {APK_URL ? (
+              <>
+                <a href={APK_URL} download className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1A5FB4] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#164A8F] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1A5FB4]">
+                  <Download size={18} aria-hidden="true" /> Download APK
+                </a>
+                <p className="mt-3 text-sm text-gray-500">
+                  Your phone may ask you to allow installs from this source.
+                </p>
+              </>
+            ) : (
+              <>
+                <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full bg-[#1A5FB4]/60 px-6 py-3.5 text-sm font-bold text-white">
+                  <Download size={18} aria-hidden="true" /> APK coming soon
+                </button>
+                <p className="mt-3 text-sm text-gray-500">
+                  The Android download will be available here soon.
+                </p>
+              </>
+            )}
           </div>
           <Link href="/login" scroll={false} className="mt-6 inline-flex items-center gap-1.5 rounded-sm text-sm font-semibold text-[#1A5FB4] hover:text-[#164A8F] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1A5FB4]">
             Use E-CHATCO on the web <ArrowUpRight size={16} aria-hidden="true" />
