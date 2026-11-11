@@ -314,6 +314,117 @@ class HailHttpTest extends TestCase
         $response->assertJsonPath('data.status', 'CANCELLED');
     }
 
+    public function test_hail_reaches_every_unit_whose_radius_covers_the_commuter(): void
+    {
+        $inRange = $this->addOnDutyUnit('TEST-002', $this->vehicleLat + 0.009, $this->vehicleLng); // ~1km from vehicle, ~500m from commuter
+        $outOfRange = $this->addOnDutyUnit('TEST-003', $this->vehicleLat + 0.03, $this->vehicleLng); // ~2.8km from commuter
+        $onBreak = $this->addOnDutyUnit('TEST-004', $this->vehicleLat + 0.0045, $this->vehicleLng, onBreak: true);
+
+        $created = $this->actingAs($this->commuter, 'sanctum')
+            ->postJson('/api/v1/commuter/hail', [
+                'vehicle_id' => $this->vehicle->id,
+                'commuter_lat' => $this->vehicleLat + 0.0045,
+                'commuter_lng' => $this->vehicleLng,
+            ])->assertCreated()
+            ->assertJsonPath('data.vehicle_id', $this->vehicle->id);
+
+        $this->assertEqualsCanonicalizing(
+            [$this->vehicle->id, $inRange->id],
+            Hail::pending()->pluck('vehicle_id')->all(),
+        );
+        $this->assertSame(0, Hail::whereIn('vehicle_id', [$outOfRange->id, $onBreak->id])->count());
+
+        // Cancelling the returned hail hides the pickup point on both units.
+        $this->deleteJson('/api/v1/commuter/hail/'.$created->json('data.id'))->assertOk();
+        $this->assertSame(0, Hail::pending()->count());
+        $this->assertSame(2, Hail::where('status', HailStatus::CANCELLED)->count());
+    }
+
+    public function test_cancel_still_clears_other_units_when_picked_units_copy_already_closed(): void
+    {
+        $other = $this->addOnDutyUnit('TEST-002', $this->vehicleLat + 0.0045, $this->vehicleLng);
+        $hail = app(HailService::class)->createHail($this->commuter, $this->vehicle->id, $this->vehicleLat, $this->vehicleLng);
+        // e.g. the picked unit ended its shift, which cancels only its own copy.
+        $hail->update(['status' => HailStatus::CANCELLED]);
+
+        $this->actingAs($this->commuter, 'sanctum')
+            ->deleteJson("/api/v1/commuter/hail/{$hail->id}")
+            ->assertStatus(409);
+
+        $this->assertDatabaseHas('hails', ['vehicle_id' => $other->id, 'status' => 'CANCELLED']);
+    }
+
+    public function test_cancelling_another_commuters_hail_leaves_own_hails_untouched(): void
+    {
+        $intruder = User::create(['email' => 'other@test.com', 'password' => bcrypt('password'), 'role' => UserRole::COMMUTER]);
+        $hail = app(HailService::class)->createHail($this->commuter, $this->vehicle->id, $this->vehicleLat, $this->vehicleLng);
+
+        $this->actingAs($intruder, 'sanctum')
+            ->deleteJson("/api/v1/commuter/hail/{$hail->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('hails', ['id' => $hail->id, 'status' => 'PENDING']);
+    }
+
+    private function addOnDutyUnit(string $unitNumber, float $lat, float $lng, bool $onBreak = false): Vehicle
+    {
+        $conductor = User::create(['email' => strtolower($unitNumber).'@test.com', 'password' => bcrypt('password'), 'role' => UserRole::CONDUCTOR]);
+        ConductorProfile::create([
+            'id' => $conductor->id,
+            'first_name' => 'Unit',
+            'middle_name' => null,
+            'last_name' => $unitNumber,
+            'birthday' => '1990-01-01',
+            'profile_picture_url' => null,
+            'generated_username' => strtolower($unitNumber),
+            'generated_password' => bcrypt('password'),
+        ]);
+        $vehicle = Vehicle::create([
+            'unit_number' => $unitNumber,
+            'plate_number' => $unitNumber.'-P',
+            'route_id' => $this->vehicle->route_id,
+            'conductor_id' => $conductor->id,
+            'status' => 'ACTIVE',
+        ]);
+        $driver = Driver::create([
+            'first_name' => 'Unit',
+            'middle_name' => null,
+            'last_name' => 'Driver',
+            'birthday' => '1990-01-01',
+            'contact' => '+639171112222',
+            'license_number' => 'DL-'.$unitNumber,
+            'hire_date' => '2023-01-01',
+            'profile_picture_url' => null,
+            'status' => 'ACTIVE',
+        ]);
+        $shift = ShiftLog::forceCreate([
+            'shift_id' => 'SFT-'.$unitNumber,
+            'conductor_id' => $conductor->id,
+            'driver_id' => $driver->id,
+            'vehicle_id' => $vehicle->id,
+            'route_id' => $this->vehicle->route_id,
+            'conductor_name' => 'Unit '.$unitNumber,
+            'driver_name' => 'Driver',
+            'unit_number' => $unitNumber,
+            'plate_number' => $vehicle->plate_number,
+            'time_in' => now(),
+            'is_active' => true,
+            'status' => 'ACTIVE',
+            'is_on_break' => $onBreak,
+        ]);
+        $vehicle->update(['active_shift_id' => $shift->shift_id]);
+        VehicleLocation::create([
+            'vehicle_id' => $vehicle->id,
+            'shift_id' => $shift->shift_id,
+            'conductor_id' => $conductor->id,
+            'lat' => $lat,
+            'lng' => $lng,
+            'fix_recorded_at' => now(),
+        ]);
+
+        return $vehicle;
+    }
+
     public function test_get_conductor_hails_returns_200_with_list(): void
     {
         app(HailService::class)->createHail(

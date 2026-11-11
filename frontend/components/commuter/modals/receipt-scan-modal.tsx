@@ -122,7 +122,8 @@ export default function ReceiptScanModal({ onClose }: ReceiptScanModalProps) {
 
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
+          // Scan box spans the whole camera view, so the frame corners sit at its edges.
+          { fps: 10, qrbox: (viewfinderWidth, viewfinderHeight) => ({ width: viewfinderWidth, height: viewfinderHeight }) },
           (decodedText) => {
             if (!mounted) return;
             void stopScanner();

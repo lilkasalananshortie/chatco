@@ -81,12 +81,8 @@ export function QrScanner({ onToken, onCancel, variant = 'page' }: QrScannerProp
           { facingMode: 'environment' },
           {
             fps: 10,
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-              // Square scan area, 70% of the smaller viewfinder dim.
-              const minDim = Math.min(viewfinderWidth, viewfinderHeight);
-              const edge = Math.floor(minDim * 0.7);
-              return { width: edge, height: edge };
-            },
+            // Scan box spans the whole camera view, matching the full-size frame overlay.
+            qrbox: (viewfinderWidth, viewfinderHeight) => ({ width: viewfinderWidth, height: viewfinderHeight }),
             aspectRatio: 1,
           },
           (decodedText) => {
@@ -147,11 +143,11 @@ export function QrScanner({ onToken, onCancel, variant = 'page' }: QrScannerProp
             own qrbox for actual detection. */}
         {!cameraError && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="relative w-48 h-48">
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#62A0EA] rounded-tl-lg" />
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-[#62A0EA] rounded-tr-lg" />
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-[#62A0EA] rounded-bl-lg" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#62A0EA] rounded-br-lg" />
+            <div className="relative w-full h-full">
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#62A0EA] rounded-tl-2xl" />
+              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-[#62A0EA] rounded-tr-2xl" />
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-[#62A0EA] rounded-bl-2xl" />
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#62A0EA] rounded-br-2xl" />
             </div>
           </div>
         )}

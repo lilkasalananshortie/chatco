@@ -170,9 +170,6 @@ export default function TransactionReceipt({
         Visit Chatco at{' '}
         <a href="https://chatco.online" target="_blank" rel="noopener noreferrer" className="font-bold underline">chatco.online</a>
       </p>
-      <p className="mt-1 text-center text-[9px] text-black/50">
-        This serves as your official receipt.
-      </p>
     </section>
   );
 }

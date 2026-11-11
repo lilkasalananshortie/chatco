@@ -98,7 +98,8 @@ export default function ScanModal({ onClose }: ScanModalProps) {
 
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1 },
+          // Scan box spans the whole camera view, matching the full-size frame overlay.
+          { fps: 10, qrbox: (viewfinderWidth, viewfinderHeight) => ({ width: viewfinderWidth, height: viewfinderHeight }), aspectRatio: 1 },
           (decodedText) => {
             if (!mounted) return;
             // Stop the scanner immediately — we have a result. The
@@ -339,11 +340,11 @@ export default function ScanModal({ onClose }: ScanModalProps) {
                 {/* Scan frame overlay */}
                 {!cameraError && (
                   <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div className="relative w-48 h-48">
-                      <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-tl-lg" />
-                      <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-tr-lg" />
-                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-bl-lg" />
-                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-br-lg" />
+                    <div className="relative w-full h-full">
+                      <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-tl-2xl" />
+                      <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-tr-2xl" />
+                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-bl-2xl" />
+                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#62A0EA] light:border-[#1A5FB4] rounded-br-2xl" />
                     </div>
                   </div>
                 )}

@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\VehicleLocation;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class HailService
 {
@@ -21,8 +22,15 @@ class HailService
 
     public function __construct(
         private ShiftDeviceService $shiftDeviceService,
+        private LocationService $locationService,
     ) {}
 
+    /**
+     * Every unit whose radius covers the commuter gets its own copy of the
+     * hail, so each of those conductors sees the pickup point. The unit the
+     * commuter picked must pass; the others are added only when they pass the
+     * same checks. Returns the picked unit's copy.
+     */
     public function createHail(
         User $commuter,
         string $vehicleId,
@@ -33,73 +41,162 @@ class HailService
             abort(403, 'Forbidden');
         }
 
-        return DB::transaction(function () use ($commuter, $vehicleId, $commuterLat, $commuterLng) {
+        // Unlocked pre-filter over the units shown on the commuter map; the
+        // locked checks below are authoritative. Sorted so concurrent hails
+        // covering the same units lock rows in the same order.
+        $vehicleIds = $this->locationService->getAllActiveLocations()
+            ->filter(fn ($row) => GeoHelper::haversineMeters(
+                $commuterLat,
+                $commuterLng,
+                (float) $row->lat,
+                (float) $row->lng,
+            ) <= GeoHelper::HAIL_RADIUS_M)
+            ->pluck('vehicle_id')
+            ->push($vehicleId)
+            ->unique()
+            ->sort()
+            ->values();
+
+        return DB::transaction(function () use ($commuter, $vehicleId, $vehicleIds, $commuterLat, $commuterLng) {
             // Serializes a commuter's hail creation attempts without a global lock.
             User::query()->whereKey($commuter->id)->lockForUpdate()->firstOrFail();
             if (Hail::query()->where('commuter_id', $commuter->id)->pending()->exists()) {
                 abort(409, 'Duplicate pending hail');
             }
 
-            $shift = ShiftLog::query()
-                ->where('vehicle_id', $vehicleId)
+            $shifts = ShiftLog::query()
+                ->whereIn('vehicle_id', $vehicleIds)
                 ->active()
+                ->orderBy('vehicle_id')
                 ->lockForUpdate()
-                ->first();
-            if (! $shift || $shift->is_on_break) {
-                abort(422, $shift ? 'Vehicle is currently on break' : 'Vehicle not on duty');
-            }
-
-            $location = VehicleLocation::query()
-                ->where('vehicle_id', $vehicleId)
-                ->where('shift_id', $shift->shift_id)
-                ->where('updated_at', '>=', $shift->time_in)
+                ->get()
+                ->keyBy('vehicle_id');
+            $locations = VehicleLocation::query()
+                ->whereIn('vehicle_id', $vehicleIds)
+                ->orderBy('vehicle_id')
                 ->lockForUpdate()
-                ->first();
-            if (! $location || $location->lat === null || $location->lng === null) {
-                abort(422, 'Vehicle position is unavailable');
+                ->get()
+                ->keyBy('vehicle_id');
+
+            $routes = [];
+            $hails = [];
+            $expiresAt = now()->addMinutes(self::HAIL_TTL_MINUTES);
+            foreach ($vehicleIds as $id) {
+                try {
+                    $distance = $this->hailableDistance($shifts->get($id), $locations->get($id), $commuterLat, $commuterLng, $routes);
+                } catch (HttpException|OutsideRadiusException $e) {
+                    // The picked unit keeps its exact refusal; other units are extras.
+                    if ($id === $vehicleId) {
+                        throw $e;
+                    }
+
+                    continue;
+                }
+
+                $hails[$id] = Hail::create([
+                    'commuter_id' => $commuter->id,
+                    'vehicle_id' => $id,
+                    'commuter_lat' => $commuterLat,
+                    'commuter_lng' => $commuterLng,
+                    'distance_m' => $distance,
+                    'status' => HailStatus::PENDING,
+                    'expires_at' => $expiresAt,
+                ]);
             }
-            // Same offline rule as the commuter map, so a hidden unit can't be hailed.
-            if ($location->updated_at->lt(now()->subSeconds(LocationService::COMMUTER_FRESH_SECONDS))) {
-                abort(422, 'Vehicle is offline');
-            }
 
-            $distance = GeoHelper::haversineMeters(
-                $commuterLat,
-                $commuterLng,
-                (float) $location->lat,
-                (float) $location->lng,
-            );
-            if ($distance > GeoHelper::HAIL_RADIUS_M) {
-                throw new OutsideRadiusException($distance);
-            }
+            DB::afterCommit(function () use ($hails): void {
+                foreach ($hails as $hail) {
+                    broadcast(new HailCreated($hail));
+                }
+            });
 
-            $route = $shift->route_id ? Route::find($shift->route_id) : null;
-            if ($route?->hasGeometry() && GeoHelper::distanceToPolylineMeters(
-                $commuterLat,
-                $commuterLng,
-                $route->geometry,
-            ) > GeoHelper::HAIL_RADIUS_M) {
-                abort(422, 'Pickup point is outside the active route coverage.');
-            }
-
-            $hail = Hail::create([
-                'commuter_id' => $commuter->id,
-                'vehicle_id' => $vehicleId,
-                'commuter_lat' => $commuterLat,
-                'commuter_lng' => $commuterLng,
-                'distance_m' => $distance,
-                'status' => HailStatus::PENDING,
-                'expires_at' => now()->addMinutes(self::HAIL_TTL_MINUTES),
-            ]);
-
-            DB::afterCommit(fn () => broadcast(new HailCreated($hail)));
-
-            return $hail;
+            return $hails[$vehicleId];
         }, 3);
     }
 
+    /**
+     * Distance from the commuter to a unit that can take the hail; throws the
+     * reason it can't. $shift and $location must already be locked.
+     *
+     * @param  array<string, Route|null>  $routes  per-request route cache
+     */
+    private function hailableDistance(
+        ?ShiftLog $shift,
+        ?VehicleLocation $location,
+        float $commuterLat,
+        float $commuterLng,
+        array &$routes,
+    ): float {
+        if (! $shift || $shift->is_on_break) {
+            abort(422, $shift ? 'Vehicle is currently on break' : 'Vehicle not on duty');
+        }
+
+        if (! $location
+            || $location->shift_id !== $shift->shift_id
+            || $location->updated_at === null
+            || $location->updated_at->lt($shift->time_in)
+            || $location->lat === null
+            || $location->lng === null) {
+            abort(422, 'Vehicle position is unavailable');
+        }
+        // Same offline rule as the commuter map, so a hidden unit can't be hailed.
+        if ($location->updated_at->lt(now()->subSeconds(LocationService::COMMUTER_FRESH_SECONDS))) {
+            abort(422, 'Vehicle is offline');
+        }
+
+        $distance = GeoHelper::haversineMeters(
+            $commuterLat,
+            $commuterLng,
+            (float) $location->lat,
+            (float) $location->lng,
+        );
+        if ($distance > GeoHelper::HAIL_RADIUS_M) {
+            throw new OutsideRadiusException($distance);
+        }
+
+        $route = null;
+        if ($shift->route_id) {
+            $route = $routes[$shift->route_id] ??= Route::find($shift->route_id);
+        }
+        if ($route?->hasGeometry() && GeoHelper::distanceToPolylineMeters(
+            $commuterLat,
+            $commuterLng,
+            $route->geometry,
+        ) > GeoHelper::HAIL_RADIUS_M) {
+            abort(422, 'Pickup point is outside the active route coverage.');
+        }
+
+        return $distance;
+    }
+
+    /**
+     * Cancels the hail and its copies on the other units in range (a commuter
+     * has at most one pending hail, so their pending rows are those copies).
+     * Copies go first: the picked unit's copy may already be closed, e.g. its
+     * shift ended, and its 409 must not leave the others on a conductor map.
+     */
     public function cancelHail(User $commuter, string $hailId): Hail
     {
+        if (Hail::query()->whereKey($hailId)->firstOrFail()->commuter_id !== $commuter->id) {
+            abort(403, 'Forbidden');
+        }
+
+        Hail::query()
+            ->where('commuter_id', $commuter->id)
+            ->pending()
+            ->whereKeyNot($hailId)
+            ->pluck('id')
+            ->each(function (string $id) use ($commuter): void {
+                try {
+                    $this->transitionHail($id, HailStatus::CANCELLED, $commuter);
+                } catch (HttpException $e) {
+                    // Expired or closed by its own unit in the meantime.
+                    if ($e->getStatusCode() !== 409) {
+                        throw $e;
+                    }
+                }
+            });
+
         return $this->transitionHail($hailId, HailStatus::CANCELLED, $commuter);
     }
 

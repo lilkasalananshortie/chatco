@@ -34,8 +34,6 @@ export interface BusMarkerOptions {
   heading: UnitHeading | null;
   /** The marker's existing status colour (capacity, break, stale). */
   statusColor: string;
-  /** Commuter map: the commuter is inside this unit's 1 km radius. */
-  withinRadius?: boolean;
   /** Admin map: GPS is stale, so the marker is faded. */
   dimmed?: boolean;
 }
@@ -45,19 +43,18 @@ export interface BusMarkerOptions {
 // skips setIcon() for units whose look didn't change.
 const cache = new Map<string, L.DivIcon>();
 
-export function busMarkerIcon({ heading, statusColor, withinRadius = false, dimmed = false }: BusMarkerOptions): L.DivIcon {
+export function busMarkerIcon({ heading, statusColor, dimmed = false }: BusMarkerOptions): L.DivIcon {
   const facing = heading?.facing ?? "s";
   const arrow = heading?.arrow ?? null;
-  const key = `${facing}|${arrow ?? "-"}|${statusColor}|${withinRadius}|${dimmed}`;
+  const key = `${facing}|${arrow ?? "-"}|${statusColor}|${dimmed}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
   // The status dot keeps what the old ring colour showed (capacity, break,
-  // stale), now that the marker itself is a picture.
-  const statusDot = `<span style="position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:${statusColor};border:2px solid #071A2E;"></span>`;
-  const radiusDot = withinRadius
-    ? `<span style="position:absolute;right:0;top:0;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid #071A2E;"></span>`
-    : "";
+  // stale), now that the marker itself is a picture. It sits on the top corner
+  // behind the bus (top-right when facing left, else top-left) so it stays off the front.
+  const dotSide = facing === "w" || facing === "nw" || facing === "sw" ? "right:2px" : "left:2px";
+  const statusDot = `<span style="position:absolute;${dotSide};top:2px;width:12px;height:12px;border-radius:50%;background:${statusColor};border:2px solid #071A2E;"></span>`;
   // Up-pointing arrow rotated to the trip bearing, sitting on a ring around
   // the bus at that same bearing: heading south-east puts it bottom-right,
   // north-west puts it top-left. White edge reads on light and dark maps.
@@ -75,7 +72,7 @@ export function busMarkerIcon({ heading, statusColor, withinRadius = false, dimm
     className: "custom-bus-icon",
     html: `<div style="position:relative;width:${W}px;height:${H}px;opacity:${dimmed ? 0.55 : 1};">
              <img src="${BUS_SRC[facing]}" width="${W}" height="${H}" alt="" draggable="false" style="display:block;width:${W}px;height:${H}px;pointer-events:none;" />
-             ${statusDot}${radiusDot}${arrowEl}
+             ${statusDot}${arrowEl}
            </div>`,
     iconSize: [W, H],
     iconAnchor: [W / 2, H / 2],

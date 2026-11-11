@@ -80,7 +80,7 @@ function VehicleMarkerImpl({
         }}
       />
       {/* Keep vehicles above the commuter's location pin when icons overlap. */}
-      <Marker position={position} icon={busMarkerIcon({ heading, statusColor: config.color, withinRadius: isWithinRadius })} eventHandlers={eventHandlers} zIndexOffset={1000}>
+      <Marker position={position} icon={busMarkerIcon({ heading, statusColor: config.color })} eventHandlers={eventHandlers} zIndexOffset={1000}>
         <UnitPopup
           title={plateNumber}
           status={{ label: config.label, tone: capacityTone(capacity) }}

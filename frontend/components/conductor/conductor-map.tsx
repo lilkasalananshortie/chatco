@@ -210,7 +210,7 @@ export default function ConductorMap({
         {/* Keep waiting commuters above the conductor's vehicle when icons overlap. */}
         {visibleHails.map((hail) => (
           <Marker key={hail.id} position={[hail.latitude, hail.longitude]} icon={hailingIcon} zIndexOffset={1000}>
-            <Popup>
+            <Popup closeButton={false}>
               <div className="min-w-[180px]">
                 <div className="font-bold text-[#FF6D3A]">Commuter</div>
               </div>

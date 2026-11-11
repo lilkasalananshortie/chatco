@@ -290,24 +290,24 @@ function ResultPanel({
   onDone: () => void;
 }) {
   return (
-    <main className="min-h-[100dvh] bg-[#050F1A] flex items-center justify-center px-4 py-8">
+    <main className="min-h-[100dvh] bg-[#050F1A] light:bg-[#F8FAFC] flex items-center justify-center px-4 py-8">
       <section
         aria-live="polite"
-        className="w-full max-w-sm rounded-2xl border border-[#1C3350] bg-[#071A2E] p-6"
+        className="w-full max-w-sm rounded-2xl border border-[#1C3350] bg-[#071A2E] p-6 light:border-gray-200 light:bg-white"
       >
         <ResultMark tone={tone} />
 
-        <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/40">
+        <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/40 light:text-gray-400">
           GCash payment
         </p>
-        <h1 className="mt-1.5 text-xl font-bold leading-snug text-white">{title}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-white/60">{body}</p>
-        {note && <p className="mt-3 text-sm leading-relaxed text-white/45">{note}</p>}
+        <h1 className="mt-1.5 text-xl font-bold leading-snug text-white light:text-gray-900">{title}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-white/60 light:text-gray-600">{body}</p>
+        {note && <p className="mt-3 text-sm leading-relaxed text-white/45 light:text-gray-500">{note}</p>}
 
         {reference && (
-          <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#1C3350] pt-4">
-            <span className="text-xs text-white/40">Reference</span>
-            <span className="truncate font-mono text-xs text-white/70">{reference}</span>
+          <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#1C3350] pt-4 light:border-gray-200">
+            <span className="text-xs text-white/40 light:text-gray-400">Reference</span>
+            <span className="truncate font-mono text-xs text-white/70 light:text-gray-700">{reference}</span>
           </div>
         )}
 
@@ -316,7 +316,7 @@ function ResultPanel({
           className={`mt-6 w-full rounded-xl py-3 text-sm font-semibold transition-colors active:scale-[0.98] ${
             doneVariant === "primary"
               ? "bg-[#1A5FB4] text-white hover:bg-[#164A8F]"
-              : "border border-[#1C3350] bg-[#0B1E33] text-white/80 hover:bg-[#10273F]"
+              : "border border-[#1C3350] bg-[#0B1E33] text-white/80 hover:bg-[#10273F] light:border-gray-200 light:bg-gray-100 light:text-gray-700 light:hover:bg-gray-200"
           }`}
         >
           {doneLabel}
@@ -332,7 +332,7 @@ function ResultMark({ tone }: { tone: ResultTone }) {
       <div
         role="status"
         aria-label="Checking payment"
-        className="h-11 w-11 rounded-full border-[3px] border-[#1C3350] border-t-[#62A0EA] animate-spin"
+        className="h-11 w-11 rounded-full border-[3px] border-[#1C3350] border-t-[#62A0EA] light:border-gray-200 light:border-t-[#1A5FB4] animate-spin"
       />
     );
   }
@@ -341,11 +341,11 @@ function ResultMark({ tone }: { tone: ResultTone }) {
   return (
     <div
       className={`flex h-11 w-11 items-center justify-center rounded-xl border ${
-        isError ? "border-[#5C1F27] bg-[#2B1116]" : "border-[#1C3350] bg-[#0B1E33]"
+        isError ? "border-[#5C1F27] bg-[#2B1116] light:border-red-200 light:bg-red-50" : "border-[#1C3350] bg-[#0B1E33] light:border-gray-200 light:bg-gray-50"
       }`}
     >
       <svg
-        className={`h-5 w-5 ${isError ? "text-red-400" : "text-[#62A0EA]"}`}
+        className={`h-5 w-5 ${isError ? "text-red-400 light:text-red-600" : "text-[#62A0EA] light:text-[#1A5FB4]"}`}
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -370,10 +370,10 @@ export default function GcashReturnPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-[100dvh] bg-[#050F1A] flex items-center justify-center px-4 py-8">
-          <section className="w-full max-w-sm rounded-2xl border border-[#1C3350] bg-[#071A2E] p-6">
+        <main className="min-h-[100dvh] bg-[#050F1A] light:bg-[#F8FAFC] flex items-center justify-center px-4 py-8">
+          <section className="w-full max-w-sm rounded-2xl border border-[#1C3350] bg-[#071A2E] p-6 light:border-gray-200 light:bg-white">
             <ResultMark tone="waiting" />
-            <p className="mt-5 text-sm text-white/60">Confirming your payment…</p>
+            <p className="mt-5 text-sm text-white/60 light:text-gray-600">Confirming your payment…</p>
           </section>
         </main>
       }

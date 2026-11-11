@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ConnectionStatus } from "laravel-echo";
 import { getEcho } from "@/lib/echo";
 import { fetchActiveHails, type ConductorHailRequest } from "@/lib/conductor/services/hails.service";
+import { alertNewHail } from "@/lib/shared/geo/proximity-notification";
 
 interface UseConductorHailsResult {
   hails: ConductorHailRequest[];
@@ -21,6 +22,9 @@ export function useConductorHails(
   const [error, setError] = useState<string | null>(null);
   const refreshInFlight = useRef<Promise<void> | null>(null);
   const refreshPending = useRef(false);
+  // Hail ids already shown; null until the first successful load, so hails
+  // already waiting when the dashboard opens don't trigger the alert.
+  const seenHailIds = useRef<Set<string> | null>(null);
 
   const refresh = useCallback(async () => {
     if (refreshInFlight.current) {
@@ -35,6 +39,14 @@ export function useConductorHails(
         do {
           refreshPending.current = false;
           const { hails: fetchedHails, error: fetchError } = await fetchActiveHails();
+          // Diff by id after each fetch so the alert fires whether the hail
+          // arrived by Pusher event or by the polling fallback. Skip failed
+          // fetches so a blip doesn't re-alert hails already seen.
+          if (!fetchError) {
+            const seen = seenHailIds.current;
+            if (seen && fetchedHails.some((h) => !seen.has(h.id))) alertNewHail();
+            seenHailIds.current = new Set(fetchedHails.map((h) => h.id));
+          }
           setHails(fetchedHails);
           setError(fetchError);
           setStatus(
@@ -55,6 +67,8 @@ export function useConductorHails(
   }, []);
 
   useEffect(() => {
+    // New unit/shift: its existing hails are a baseline, not new arrivals.
+    seenHailIds.current = null;
     void refresh();
 
     let isSubscribed = false;

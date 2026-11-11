@@ -357,7 +357,6 @@ function ReceiptPreview({ config }: { config: ReceiptConfig }) {
         Visit Chatco at{' '}
         <a href="https://chatco.online" target="_blank" rel="noopener noreferrer" className="font-bold underline">chatco.online</a>
       </p>
-      <p className="text-center text-[9px] mt-1 text-black/50">This serves as your official receipt.</p>
     </div>
   );
 }
