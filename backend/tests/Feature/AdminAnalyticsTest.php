@@ -239,9 +239,45 @@ class AdminAnalyticsTest extends TestCase
         $this->assertSame(30, $response->json('data.date_range.days'));
         $this->assertEquals(75, $response->json('data.totals.total_fares'));
 
-        // Analytics without the dashboard option still uses its selected range.
+        // Analytics without the dashboard option skips this query; its Pickup
+        // Points report comes from heatmap_zones instead.
         $analytics = $this->actingAs($admin)->getJson('/api/v1/admin/analytics?date_from=2026-10-11&date_to=2026-10-11')->assertOk();
-        $this->assertSame([['name' => 'A', 'count' => 1]], $analytics->json('data.pickup_points'));
+        $this->assertSame([], $analytics->json('data.pickup_points'));
+    }
+
+    public function test_analytics_pickup_report_counts_fare_points_without_coordinates_like_the_dashboard(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 10)->setTime(12, 0));
+        $admin = $this->makeAdmin();
+        $route = Route::firstOrFail();
+        // The cooperative fare matrix seeds every point with null coordinates.
+        $points = collect(range(1, 17))->map(fn ($n) => FarePoint::create([
+            'route_id' => $route->id, 'point_number' => $n, 'code' => "P{$n}",
+            'name' => sprintf('Point %02d', $n), 'regular_fare' => 15, 'discounted_fare' => 12,
+        ]));
+        $first = $points->first();
+        $this->makeTransaction('PAID', 'CASH', 15, now(), ['pickup_stop_id' => $first->id]);
+        $this->makeTransaction('PAID', 'GCASH', 15, now(), ['pickup_stop_id' => $first->id]);
+        $this->makeTransaction('PAID', 'VOUCHER', 0, now(), ['pickup_stop_id' => $first->id]);
+        $this->makeTransaction('PENDING', 'GCASH', 15, now(), ['pickup_stop_id' => $first->id]);
+        $points->skip(1)->each(fn ($point) => $this->makeTransaction('PAID', 'CASH', 15, now(), ['pickup_stop_id' => $point->id]));
+
+        $from = now()->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
+        $zones = $this->actingAs($admin)
+            ->getJson("/api/v1/admin/analytics?date_from={$from}&date_to=".now()->toDateString())
+            ->assertOk()->json('data.heatmap_zones');
+
+        // All 17 points listed (no top-15 cap), voucher and pending rides excluded.
+        $this->assertCount(17, $zones);
+        $this->assertSame(['Point 01', 2, null, null], [$zones[0]['zone'], $zones[0]['commuters'], $zones[0]['lat'], $zones[0]['lng']]);
+        $this->assertSame(['Point 02', 1], [$zones[1]['zone'], $zones[1]['commuters']]);
+
+        // Same counts as the dashboard card over the same week.
+        $dashboard = $this->actingAs($admin)->getJson('/api/v1/admin/analytics?pickup_period=week')->assertOk()->json('data.pickup_points');
+        $this->assertSame(
+            array_slice(array_map(fn ($z) => ['name' => $z['zone'], 'count' => $z['commuters']], $zones), 0, 10),
+            $dashboard,
+        );
     }
 
     public function test_weekly_dashboard_pickups_reset_on_monday_and_have_an_empty_state(): void

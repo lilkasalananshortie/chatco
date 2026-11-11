@@ -11,9 +11,9 @@ use Illuminate\Database\Seeder;
  * AnnouncementSeeder — admin-published system announcements for the
  * commuter/conductor feed and the admin announcements manager.
  *
- * Covers every category the UI maps (SYSTEM / SAFETY / PROMO / MAINTENANCE /
- * ROUTE / HOLIDAY) plus one ARCHIVED row so the archived/active filter has
- * something on both sides. `created_by` is attributed to the seeded admin.
+ * 17 announcements covering every category the UI maps (SYSTEM / SAFETY /
+ * PROMO / MAINTENANCE / ROUTE / HOLIDAY), with ARCHIVED rows so the
+ * archived/active filter has something on both sides. `created_by` is attributed to the seeded admin.
  *
  * Depends on: an admin user existing.
  * Run alone with:  php artisan db:seed --class=AnnouncementSeeder
@@ -36,6 +36,16 @@ class AnnouncementSeeder extends Seeder
             ['MAINTENANCE', 'Scheduled Maintenance', 'The app may be briefly unavailable on Sunday, 2:00–3:00 AM, for scheduled maintenance. Thank you for your patience.', 'ACTIVE', 2],
             ['HOLIDAY', 'Holiday Schedule', 'Trips will follow a reduced schedule on the upcoming public holiday. Please plan your travel accordingly.', 'ACTIVE', 1],
             ['PROMO', 'Old Fiesta Promo (Ended)', 'The town fiesta discount promo has ended. Thank you to everyone who joined!', 'ARCHIVED', 20],
+            ['SYSTEM', 'Pay Your Fare with GCash', 'Scan the QR code shown by your conductor and pay through GCash. Your receipt appears in the app as soon as the payment goes through.', 'ACTIVE', 12],
+            ['SYSTEM', 'Waiting for a Ride? Use Pick Me Up', 'Press and hold Pick Me Up on the map to let the nearest conductor know you are waiting at the roadside.', 'ACTIVE', 11],
+            ['SAFETY', 'Share Your Ride with Family', 'Generate a Share My Ride link so family and friends can follow your trip live until you arrive.', 'ACTIVE', 10],
+            ['ROUTE', 'Heavy Traffic at Crossing Malolos', 'Expect slow traffic around Crossing Malolos during the morning and evening rush. Plan your trip a little earlier.', 'ACTIVE', 8],
+            ['SYSTEM', 'Lost Something on a Jeepney?', 'Report lost items in the Lost & Found tab. Conductors log found items at the end of each trip, and the admin will contact you when there is a match.', 'ACTIVE', 6],
+            ['PROMO', 'Vouchers Now Valid for 3 Days', 'Free ride vouchers earned from 10 paid rides are now valid for 3 days. Use yours before it expires.', 'ACTIVE', 4],
+            ['MAINTENANCE', 'Live Tracking Briefly Paused', 'Live jeepney tracking may pause for a few minutes tonight while we update our servers. Fare payments are not affected.', 'ACTIVE', 2],
+            ['ROUTE', 'Road Repairs near Tuktukan', 'One lane is closed along McArthur Highway near Tuktukan for road repairs. Jeepneys may take a few minutes longer.', 'ACTIVE', 1],
+            ['HOLIDAY', "All Saints' Day Trips", "Expect more passengers bound for cemeteries along the route on All Saints' Day. Units will run until late evening.", 'ARCHIVED', 14],
+            ['SYSTEM', 'Discount Verification Reminder', 'Students, seniors and PWD riders: keep your ID ready when boarding. Conductors may ask to see it before applying the discounted fare.', 'ACTIVE', 0],
         ];
 
         foreach ($items as [$type, $title, $message, $status, $daysAgo]) {

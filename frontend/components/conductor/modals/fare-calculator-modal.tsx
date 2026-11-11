@@ -108,6 +108,10 @@ export default function FareCalcModal({ isOpen, onClose, shiftId, routeId, condu
     "pickup" | "dropoff" | null
   >("pickup");
   const [expandedBarangay, setExpandedBarangay] = useState<number | null>(null);
+  // Below lg the Select Location panel (pickup/drop-off, passenger mode)
+  // starts collapsed so the barangay list gets the screen, same as the
+  // commuter Fare Matrix; the list's hint line still shows which field is next.
+  const [routePanelOpen, setRoutePanelOpen] = useState(false);
   const [pickupLandmark, setPickupLandmark] = useState<string | null>(null);
   const [dropoffLandmark, setDropoffLandmark] = useState<string | null>(null);
 
@@ -745,6 +749,7 @@ export default function FareCalcModal({ isOpen, onClose, shiftId, routeId, condu
     setSearchQuery("");
     setSelectingField("pickup");
     setExpandedBarangay(null);
+    setRoutePanelOpen(false);
     setGcashInitiation(null);
     setGcashStatus(null);
     setGcashConfirmationDelayed(false);
@@ -1005,7 +1010,11 @@ export default function FareCalcModal({ isOpen, onClose, shiftId, routeId, condu
     return (
       <div className={`fixed inset-0 z-[100] flex flex-col bg-[#050F1A] light:max-sm:bg-gray-50 safe-area-inset sm:items-center sm:justify-center sm:bg-black/60 sm:backdrop-blur-sm sm:p-4 xl:justify-end xl:bg-transparent xl:backdrop-blur-none xl:bottom-24 ${backdropAnim}`} {...backdropDismiss}>
         <PopoverTail panelColor={isLight ? "#F9FAFB" : "#050F1A"} anchorOffsetPx={anchorOffset} className="light:border-gray-200" />
-        <div className={`flex flex-col h-full w-full max-w-lg mx-auto sm:h-auto sm:max-h-[85vh] sm:rounded-2xl sm:border sm:border-white/10 sm:bg-[#050F1A] light:sm:border-gray-200 light:sm:bg-gray-50 sm:shadow-2xl sm:overflow-hidden ${panelAnim}`} style={panelAnchorStyle}>
+        {/* Own key: without it React reuses the Method step's panel node, so
+            the panel's entrance animation never replays and Select Location
+            just swaps in. Remounting lets it slide up like the commuter Fare
+            Matrix sheet. */}
+        <div key="select-location-panel" className={`flex flex-col h-full w-full max-w-lg mx-auto sm:h-auto sm:max-h-[85vh] sm:rounded-2xl sm:border sm:border-white/10 sm:bg-[#050F1A] light:sm:border-gray-200 light:sm:bg-gray-50 sm:shadow-2xl sm:overflow-hidden ${panelAnim}`} style={panelAnchorStyle}>
           {/* ── Fullscreen Header ── */}
           <div className="flex-shrink-0 bg-[#071A2E] light:bg-white border-b border-white/10 light:border-gray-200 pt-safe">
             {/* Top bar: back + title + method badge + close */}
@@ -1038,7 +1047,16 @@ export default function FareCalcModal({ isOpen, onClose, shiftId, routeId, condu
               </div>
             </div>
 
-            {/* ── Pickup & Dropoff Cards with Clear Buttons ── */}
+            {/* ── Pickup & Dropoff Cards with Clear Buttons ──
+                Same 0fr -> 1fr row slide as the commuter Fare Matrix. Closed
+                below lg it is also `invisible` (switched after the slide
+                ends), which keeps its controls out of tab order; always open
+                on lg. */}
+            <div
+              id="conductor-route-panel"
+              className={`grid transition-[grid-template-rows,visibility] duration-300 ease-in-out lg:visible lg:grid-rows-[1fr] ${routePanelOpen ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}
+            >
+            <div className="min-h-0 overflow-hidden">
             <div className="px-4 pb-3 space-y-2.5">
               {/* Pickup Card */}
               <div className="relative">
@@ -1218,6 +1236,22 @@ export default function FareCalcModal({ isOpen, onClose, shiftId, routeId, condu
                 </div>
               )}
             </div>
+            </div>
+            </div>
+            {/* Small-screen toggle bar, same as the commuter Fare Matrix's:
+                chevron points down to open the panel, up to close it. */}
+            <button
+              type="button"
+              onClick={() => setRoutePanelOpen((open) => !open)}
+              aria-expanded={routePanelOpen}
+              aria-controls="conductor-route-panel"
+              aria-label={routePanelOpen ? "Hide pickup and drop-off" : "Show pickup and drop-off"}
+              className="flex items-center justify-center py-1.5 w-full border-t border-white/5 hover:bg-white/5 transition-colors active:bg-white/10 light:border-gray-200 light:hover:bg-gray-50 light:active:bg-gray-100 lg:hidden"
+            >
+              <svg className={`w-4 h-4 text-white/30 light:text-gray-400 transition-transform duration-300 ${routePanelOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
           </div>
 
           {/* ── Search Bar ── */}

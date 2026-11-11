@@ -66,8 +66,8 @@ class DatabaseSeeder extends Seeder
         }
 
         // ── Conductors ──
-        // conductor1@gmail.com … conductor10@gmail.com, usernames
-        // conductor001 … conductor010.
+        // conductor1@gmail.com … conductor20@gmail.com, usernames
+        // conductor001 … conductor020.
         $conductorSpecs = [
             ['Juan',      null,        'Dela Cruz',   '1990-03-15'],
             ['Maria',     'Santos',    'Reyes',       '1992-07-20'],
@@ -79,6 +79,16 @@ class DatabaseSeeder extends Seeder
             ['Rowena',    'Tan',       'Lacson',      '1993-01-30'],
             ['Nestor',    null,        'Galang',      '1987-06-14'],
             ['Liza',      'Cortez',    'Samonte',     '1996-04-22'],
+            ['Ramil',     null,        'Bernabe',     '1990-08-09'],
+            ['Jocelyn',   'Mallari',   'Tolentino',   '1992-11-16'],
+            ['Arnel',     null,        'Sarmiento',   '1986-02-25'],
+            ['Princess',  'Yap',       'Villanueva',  '1997-06-01'],
+            ['Dennis',    null,        'Macaraeg',    '1989-04-13'],
+            ['Marites',   'Gomez',     'Evangelista', '1991-12-05'],
+            ['Rodel',     null,        'Cunanan',     '1993-03-28'],
+            ['Shiela',    'Ignacio',   'Dimaculangan', '1995-10-10'],
+            ['Wilfredo',  null,        'Santiago',    '1985-07-21'],
+            ['Analyn',    'Pineda',    'Manansala',   '1994-01-17'],
         ];
 
         foreach ($conductorSpecs as $i => [$firstName, $middleName, $lastName, $birthday]) {
@@ -148,11 +158,12 @@ class DatabaseSeeder extends Seeder
         }
 
         // ════════════════════════════════════════════════════
-        // 4. DRIVERS + 5. VEHICLES (10 each)
+        // 4. DRIVERS (20) + 5. VEHICLES (40)
         // ════════════════════════════════════════════════════
-        // Generates 10 drivers + 10 vehicles with realistic Philippine
+        // Generates 20 drivers and 40 vehicles with realistic Philippine
         // names, proper plate numbers (XXX NNNN format), and unit
-        // numbers (UNIT-NNN format).
+        // numbers (UNIT-NNN format). There are more units than drivers, as
+        // in a real fleet where some units sit idle on any given shift.
         //
         // Vehicles start UNASSIGNED — no current driver or conductor. The
         // driver + conductor assignment happens dynamically through the
@@ -172,9 +183,20 @@ class DatabaseSeeder extends Seeder
             ['Jose',      'Mendoza',      '1989-03-08', '09178889999', '2023-07-30'],
             ['Ramon',     'Villanueva',   '1984-11-17', '09179990000', '2022-08-15'],
             ['Carlos',    'Dela Rosa',    '1992-05-20', '09170001111', '2023-10-12'],
+            ['Alfredo',   'Bautista',     '1984-02-14', '09181112222', '2022-09-01'],
+            ['Rogelio',   'Mercado',      '1987-05-30', '09182223333', '2023-01-23'],
+            ['Danilo',    'Aquino',       '1990-10-08', '09183334444', '2023-05-17'],
+            ['Ernesto',   'Pascual',      '1982-12-19', '09184445555', '2022-06-06'],
+            ['Romeo',     'Navarro',      '1988-03-03', '09185556666', '2023-08-11'],
+            ['Virgilio',  'Salazar',      '1985-09-26', '09186667777', '2022-12-02'],
+            ['Arturo',    'Galvez',       '1991-07-07', '09187778888', '2023-11-20'],
+            ['Leonardo',  'Ramos',        '1986-01-31', '09188889999', '2023-02-27'],
+            ['Benjie',    'Soriano',      '1993-08-15', '09189990000', '2024-01-08'],
+            ['Rolando',   'De Guzman',    '1983-06-22', '09180001111', '2022-10-14'],
         ];
 
-        // Plate number prefixes — Philippine region-style codes
+        // Plate number prefixes — Philippine region-style codes, cycled across
+        // the 40 units (the 4-digit number keeps every plate unique).
         $platePrefixes = ['NAA', 'NAB', 'NAC', 'NBC', 'NBD', 'DAB', 'DAC', 'AAD', 'AAE', 'PAA'];
 
         foreach ($driverSpecs as $i => $spec) {
@@ -196,11 +218,13 @@ class DatabaseSeeder extends Seeder
                 'status' => 'ACTIVE',
                 'vehicle_id' => null,
             ]);
+        }
 
+        for ($i = 0; $i < 40; $i++) {
             // Generate unique plate: XXX NNNN (3 letters + space + 4 digits)
-            $plateNumber = $platePrefixes[$i].' '.str_pad($i + 1, 4, '0', STR_PAD_LEFT);
+            $plateNumber = $platePrefixes[$i % count($platePrefixes)].' '.str_pad($i + 1, 4, '0', STR_PAD_LEFT);
 
-            // Generate unique unit number: UNIT-001 through UNIT-010
+            // Generate unique unit number: UNIT-001 through UNIT-040
             $unitNumber = 'UNIT-'.str_pad($i + 1, 3, '0', STR_PAD_LEFT);
 
             // Create the vehicle — starts UNASSIGNED (no current driver or
@@ -225,7 +249,7 @@ class DatabaseSeeder extends Seeder
         // come from real use. For demo history, run in this order:
         //   db:seed --class=ShiftLogSeeder → TransactionSeeder → RemittanceSeeder
         $this->call([
-            CommuterSeeder::class,      // 20 PH-celebrity commuters
+            CommuterSeeder::class,      // 20 PH-celebrity + 30 generated commuters
             AnnouncementSeeder::class,  // system announcements feed
             FaqSeeder::class,           // landing-page FAQ chat content
         ]);

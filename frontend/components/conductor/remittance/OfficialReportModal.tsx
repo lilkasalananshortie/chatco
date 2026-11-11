@@ -1,4 +1,5 @@
 // components/conductor/remittance/OfficialReportModal.tsx
+import { createPortal } from "react-dom";
 import { type RemittanceRecord } from "@/lib/conductor/services/remittance.service";
 import { formatTime } from "@/lib/conductor/services/shift.service";
 import { FileText, X } from "lucide-react";
@@ -295,7 +296,9 @@ export default function OfficialReportModal({ show, onClose, activeReport, route
     { label: "Route", value: route },
   ];
 
-  return (
+  // Portaled to <body>: opened from the xl:+ End-of-Day popover, a transformed
+  // ancestor would otherwise trap this fixed overlay inside the panel.
+  return createPortal(
     <div className={D.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-labelledby="official-report-title" className={`${D.panel} max-w-md overflow-hidden animate-fade-in`}>
         <div className={`flex shrink-0 items-center gap-2.5 border-b px-5 py-4 pr-14 sm:px-6 ${D.hairline}`}>
@@ -348,6 +351,7 @@ export default function OfficialReportModal({ show, onClose, activeReport, route
           <button type="button" onClick={onClose} className={`${D.button} ${D.secondary} w-full`}>Close</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

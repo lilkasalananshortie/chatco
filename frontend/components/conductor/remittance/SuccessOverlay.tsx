@@ -1,4 +1,5 @@
 // app/components/conductor/remittance/SuccessOverlay.tsx
+import { createPortal } from "react-dom";
 import { CheckCircle2 } from "lucide-react";
 import { fmt } from "@/app/(conductor)/conductor-dashboard/end-of-day/helpers";
 import { APP_DIALOG as D } from "@/components/shared/app-dialog-styles";
@@ -28,8 +29,10 @@ export default function SuccessOverlay({ show, onClose, gcashTotal, cashTotal, g
     { label: "Cash to hand over", value: safeCash },
   ];
 
-  return (
-    // z-[110]: sits above the end-of-day confirm sheet it replaces.
+  // Portaled to <body> for the same reason as ConfirmModal: inside the xl:+
+  // End-of-Day popover a transformed ancestor would pin this fixed overlay to
+  // the panel instead of the viewport. z-[110]: above the popover (z-[100]).
+  return createPortal(
     <div className={`${D.overlay.replace("z-[100]", "z-[110]")} animate-fade-in`}>
       <div role="alertdialog" aria-modal="true" aria-labelledby="eod-success-title" aria-describedby="eod-success-body" className={`${D.panel} max-w-sm p-5 sm:p-6`}>
         <div className="flex items-start gap-3">
@@ -60,6 +63,7 @@ export default function SuccessOverlay({ show, onClose, gcashTotal, cashTotal, g
         </p>
         <button type="button" onClick={onClose} autoFocus className={`${D.button} ${D.primary} mt-5 w-full`}>Done</button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

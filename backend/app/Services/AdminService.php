@@ -498,38 +498,39 @@ class AdminService
             ->count();
         $activeConductors = (int) ShiftLog::where('status', 'ACTIVE')->distinct('conductor_id')->count('conductor_id');
 
-        // Dashboard pickups use the current calendar week and the major fare
-        // point ID, so different landmark labels belong to one location.
-        // Analytics retains its selected date window and existing labels.
-        $weeklyPickups = ($filters['pickup_period'] ?? null) === 'week';
-        $pickupDateTo = $weeklyPickups ? Carbon::now() : $dateTo;
-        $pickupDateFrom = $weeklyPickups
-            ? $pickupDateTo->copy()->startOfWeek(Carbon::MONDAY)
-            : $dateFrom;
-        $pickupNameColumn = $weeklyPickups ? 'fare_points.name' : 'transactions.pickup_name';
-        $pickupPoints = DB::table('transactions')
-            ->when($weeklyPickups, fn ($query) => $query
+        // Dashboard pickups card (pickup_period=week only): the current
+        // calendar week, grouped by the major fare point so different landmark
+        // labels belong to one location. Analytics reads its Pickup Points
+        // report from heatmap_zones below, so a plain analytics call skips
+        // this query and returns an empty list.
+        $pickupPoints = [];
+        if (($filters['pickup_period'] ?? null) === 'week') {
+            $now = Carbon::now();
+            $pickupPoints = DB::table('transactions')
                 ->join('fare_points', 'transactions.pickup_stop_id', '=', 'fare_points.id')
-                ->whereIn('transactions.payment_method', ['CASH', 'GCASH']))
-            ->select($pickupNameColumn.' as pickup_name', DB::raw('COUNT(*) as pickup_count'))
-            ->where('transactions.status', 'PAID')
-            ->whereNotNull($pickupNameColumn)
-            ->where($pickupNameColumn, '!=', '')
-            ->whereBetween('transactions.created_at', [$pickupDateFrom, $pickupDateTo])
-            ->groupBy($pickupNameColumn)
-            ->orderByDesc('pickup_count')
-            ->orderBy($pickupNameColumn)
-            ->limit(10)
-            ->get()
-            ->map(fn ($row) => [
-                'name' => $row->pickup_name,
-                'count' => (int) $row->pickup_count,
-            ])
-            ->toArray();
+                ->select('fare_points.name as pickup_name', DB::raw('COUNT(*) as pickup_count'))
+                ->where('transactions.status', 'PAID')
+                ->whereIn('transactions.payment_method', ['CASH', 'GCASH'])
+                ->whereBetween('transactions.created_at', [$now->copy()->startOfWeek(Carbon::MONDAY), $now])
+                ->groupBy('fare_points.name')
+                ->orderByDesc('pickup_count')
+                ->orderBy('fare_points.name')
+                ->limit(10)
+                ->get()
+                ->map(fn ($row) => [
+                    'name' => $row->pickup_name,
+                    'count' => (int) $row->pickup_count,
+                ])
+                ->toArray();
+        }
 
-        // ── Demand Heatmap Zones (aggregate PAID transactions with coordinates) ──
-        // Join transactions with fare_points to get the GPS coordinates of each
-        // pickup location. Group by fare_point to cluster demand by location.
+        // ── Demand Heatmap Zones (Analytics > Pickup Points report) ──
+        // Paid CASH/GCASH boardings per fare point over the selected range,
+        // counted the same way as the dashboard's weekly pickups card. Fare
+        // points without coordinates are NOT excluded: the cooperative fare
+        // matrix seeds every point with null lat/lng, and filtering on them
+        // left this report empty. Not capped, so every boarding fare point is
+        // listed and the report's Share column adds up to 100%.
         // The intensity is computed from the pickup_count:
         //   - >= 50 pickups  → Critical (red)
         //   - >= 20 pickups  → High (orange)
@@ -544,12 +545,11 @@ class AdminService
                 DB::raw('COUNT(*) as commuter_count')
             )
             ->where('transactions.status', 'PAID')
-            ->whereNotNull('fare_points.latitude')
-            ->whereNotNull('fare_points.longitude')
+            ->whereIn('transactions.payment_method', ['CASH', 'GCASH'])
             ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
             ->groupBy('fare_points.id', 'fare_points.name', 'fare_points.latitude', 'fare_points.longitude')
             ->orderByDesc('commuter_count')
-            ->limit(15)
+            ->orderBy('fare_points.name')
             ->get()
             ->map(function ($row) {
                 $count = (int) $row->commuter_count;
@@ -561,8 +561,8 @@ class AdminService
                     'commuters' => $count,
                     'intensity' => $intensity,
                     'color' => $color,
-                    'lat' => (float) $row->latitude,
-                    'lng' => (float) $row->longitude,
+                    'lat' => $row->latitude !== null ? (float) $row->latitude : null,
+                    'lng' => $row->longitude !== null ? (float) $row->longitude : null,
                 ];
             })
             ->toArray();

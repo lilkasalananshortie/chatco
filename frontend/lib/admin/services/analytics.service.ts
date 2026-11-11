@@ -155,8 +155,8 @@ export interface AnalyticsHeatmapZone {
   commuters: number;
   intensity: "Critical" | "High" | "Moderate" | "Low";
   color: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface AnalyticsData {

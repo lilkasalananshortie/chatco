@@ -22,7 +22,7 @@ export const LOGOUT_LOCKED_HINT = "Remit all pending collections before signing 
  * The actual Settings body — everything except page chrome (the outer
  * sidebar-clearance wrapper, which only makes sense for the full page, not
  * the xl:+ popover — see ConductorSettingsModal). Extracted so the business
- * logic (profile fetch, past shifts, the
+ * logic (profile fetch, past shifts before a shift starts, the
  * remittance-gated logout flow) has exactly one implementation shared by
  * both:
  *   - the full page (app/(conductor)/conductor-dashboard/conductor-settings/page.tsx),
@@ -202,7 +202,12 @@ export default function SettingsContent({ showHeader = true, onSignOutControl, s
         </dl>
       </section>
 
-      {/* ===== Past shifts — the same list as End-of-Day's Remittance History ===== */}
+      {/* ===== Past shifts — the same list as End-of-Day's Remittance History =====
+          Only before a shift starts (unit verification). Once a shift is
+          active, End-of-Day already shows this history, so Settings keeps to
+          the profile. `history` is still loaded either way for the logout lock. */}
+      {!shift && (
+      <>
       <HistorySection
         showHistory={showHistory}
         setShowHistory={setShowHistory}
@@ -220,6 +225,8 @@ export default function SettingsContent({ showHeader = true, onSignOutControl, s
       {reportRecord && createPortal(
         <OfficialReportModal show onClose={() => setReportRecord(null)} activeReport={reportRecord} route={reportRoute} />,
         document.body,
+      )}
+      </>
       )}
 
       {/* ===== Logout (Bottom of scroll for both Mobile & Desktop) ===== */}
