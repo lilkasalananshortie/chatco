@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { LockKeyhole, UserRound } from "lucide-react";
+import { mdiJeepney } from "@mdi/js";
 import { useAuth } from "@/contexts/auth-context";
 import { clearShift } from "@/lib/conductor/services/shift.service";
 import { useConductorShift } from "@/app/(conductor)/hooks/use-conductor-shift";
@@ -49,6 +50,7 @@ export default function SettingsContent({ showHeader = true, onSignOutControl, s
   const { user, logout } = useAuth();
   const profileHeadingId = useId();
   const detailsHeadingId = useId();
+  const assignmentHeadingId = useId();
   const { shift, status: shiftStatus, error: shiftError } = useConductorShift();
   const { history, transactions, status: remitStatus, error: remitError } = useRemittanceData();
   // The conductor's real profile (name, username, photo), shared with the
@@ -201,6 +203,25 @@ export default function SettingsContent({ showHeader = true, onSignOutControl, s
           </div>
         </dl>
       </section>
+
+      {/* ===== Active assignment — during a shift only; before one, Past shifts below takes this slot ===== */}
+      {shift && (
+        <section aria-labelledby={assignmentHeadingId} className="rounded-2xl border border-white/10 light:border-gray-200 bg-[#0B223A] light:bg-white p-5">
+          <h3 id={assignmentHeadingId} className="flex items-center gap-2 text-sm font-semibold text-white light:text-gray-900">
+            <svg width={17} height={17} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="text-[#99C1F1] light:text-blue-600"><path d={mdiJeepney} /></svg>Active assignment
+          </h3>
+          <dl className="mt-4 grid grid-cols-2 gap-x-4">
+            <div className="min-w-0">
+              <dt className="text-xs text-white/50 light:text-gray-500">Unit</dt>
+              <dd className="mt-1 break-words text-sm text-white/90 light:text-gray-900">{shift.unitNumber || "Not assigned"}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs text-white/50 light:text-gray-500">Driver</dt>
+              <dd className="mt-1 break-words text-sm text-white/90 light:text-gray-900">{shift.driverName || "Not assigned"}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
 
       {/* ===== Past shifts — the same list as End-of-Day's Remittance History =====
           Only before a shift starts (unit verification). Once a shift is

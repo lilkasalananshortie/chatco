@@ -26,6 +26,8 @@ function reviewRequest(application: DiscountApplication): PendingRequest | null 
     idImageUrl: application.document_url ?? '', profileImageUrl: null, status: 'Pending Verification', birthdate: profile.birthdate,
     gender: profile.gender, username: profile.username, appliedType: application.requested_type, rejectionCount: 0,
     rejectionHistory: [], blockedUntil: null, createdAt: application.submitted_at,
+    // The application's own school fields show in the discount review layout.
+    studentDetails: null,
   };
 }
 

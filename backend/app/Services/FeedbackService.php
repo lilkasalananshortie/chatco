@@ -143,7 +143,7 @@ class FeedbackService
      *
      * @throws FeedbackException If the conductor profile doesn't exist.
      */
-    public function listForConductor(string $conductorId, int $perPage = 10, ?int $rating = null, bool $cursorMode = false, ?Cursor $cursor = null): array
+    public function listForConductor(string $conductorId, int $perPage = 10, ?int $rating = null, bool $cursorMode = false, ?Cursor $cursor = null, ?string $reason = null): array
     {
         if (! ConductorProfile::where('id', $conductorId)->exists()) {
             throw new FeedbackException('Conductor not found');
@@ -154,7 +154,7 @@ class FeedbackService
         $query = Feedback::where('conductor_id', $conductorId)
             ->whereNotNull('conductor_rating');
 
-        return $this->buildListResponse($query, $perPage, 'CONDUCTOR', $conductorId, 'conductor', $rating, $cursorMode, $cursor);
+        return $this->buildListResponse($query, $perPage, 'CONDUCTOR', $conductorId, 'conductor', $rating, $cursorMode, $cursor, $reason);
     }
 
     /**
@@ -165,7 +165,7 @@ class FeedbackService
      *
      * @throws FeedbackException If the driver doesn't exist.
      */
-    public function listForDriver(string $driverId, int $perPage = 10, ?int $rating = null, bool $cursorMode = false, ?Cursor $cursor = null): array
+    public function listForDriver(string $driverId, int $perPage = 10, ?int $rating = null, bool $cursorMode = false, ?Cursor $cursor = null, ?string $reason = null): array
     {
         if (! Driver::where('id', $driverId)->exists()) {
             throw new FeedbackException('Driver not found');
@@ -173,7 +173,7 @@ class FeedbackService
 
         $query = Feedback::where('driver_id', $driverId);
 
-        return $this->buildListResponse($query, $perPage, 'DRIVER', $driverId, 'driver', $rating, $cursorMode, $cursor);
+        return $this->buildListResponse($query, $perPage, 'DRIVER', $driverId, 'driver', $rating, $cursorMode, $cursor, $reason);
     }
 
     /**
@@ -266,6 +266,9 @@ class FeedbackService
      * $cursorMode switches to keyset pagination (ORDER BY created_at DESC,
      * id DESC) for the admin modal's infinite scroll. Later batches ($cursor
      * set) skip the summary aggregate entirely and return summary=null.
+     *
+     * $reason narrows the rows to reviews that picked that tag (the modal's
+     * Top reasons filter); like $rating, it never narrows the summary.
      */
     private function buildListResponse(
         Builder $query,
@@ -276,17 +279,20 @@ class FeedbackService
         ?int $rating = null,
         bool $cursorMode = false,
         ?Cursor $cursor = null,
+        ?string $reason = null,
     ): array {
         // For the conductor listing, the relevant score lives in the
         // conductor_* columns. We aggregate over those and expose them under
         // the canonical rating/category/comment keys so the admin modal +
         // conductor metrics render the CONDUCTOR's own rating, not the driver's.
         $ratingColumn = $ratee === 'conductor' ? 'conductor_rating' : 'rating';
+        $categoryColumn = $ratee === 'conductor' ? 'conductor_category' : 'category';
         $staff = ['id' => $staffId, 'role' => $role];
 
         if ($cursorMode) {
-            $summary = $cursor === null ? $this->summarize($query, $ratingColumn) : null;
+            $summary = $cursor === null ? $this->summarize($query, $ratingColumn, $categoryColumn) : null;
             $this->applyRatingFilter($query, $ratingColumn, $rating);
+            $this->applyReasonFilter($query, $categoryColumn, $reason);
 
             // No COUNT query; the (staff_id, created_at) indexes serve the
             // keyset range, so every batch costs the same at any depth.
@@ -308,8 +314,9 @@ class FeedbackService
             ];
         }
 
-        $summary = $this->summarize($query, $ratingColumn);
+        $summary = $this->summarize($query, $ratingColumn, $categoryColumn);
         $this->applyRatingFilter($query, $ratingColumn, $rating);
+        $this->applyReasonFilter($query, $categoryColumn, $reason);
 
         $paginator = $query
             ->with(['vehicle:id,unit_number,plate_number', 'commuter:id,first_name,surname'])
@@ -336,8 +343,12 @@ class FeedbackService
      * average_rating, total_count and the 5→1 distribution over every
      * rating, aggregated in SQL without loading rows or relations. The
      * rating column comes only from internal, fixed column names.
+     *
+     * With $categoryColumn, also `reasons`: the tags commuters picked, ranked
+     * by how often, split the way the commuter form offers them (complaints
+     * from 1–3 star reviews, praise from 4–5).
      */
-    private function summarize(Builder $query, string $ratingColumn): array
+    private function summarize(Builder $query, string $ratingColumn, ?string $categoryColumn = null): array
     {
         $aggregate = (clone $query)
             ->toBase()
@@ -353,13 +364,79 @@ class FeedbackService
 
         $total = (int) ($aggregate->total_count ?? 0);
 
-        return [
+        $summary = [
             'average_rating' => $total > 0 ? round((float) $aggregate->average_rating, 2) : 0.0,
             'total_count' => $total,
             'distribution' => collect(range(5, 1))->mapWithKeys(fn (int $star): array => [
                 (string) $star => (int) ($aggregate->{"rating_{$star}"} ?? 0),
             ])->all(),
         ];
+
+        if ($categoryColumn !== null) {
+            $summary['reasons'] = $total > 0
+                ? $this->rankReasons($query, $ratingColumn, $categoryColumn)
+                : ['complaints' => [], 'praise' => []];
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Tags are stored comma-joined in one column, so they are counted here
+     * rather than in SQL; only two short columns of one staff member's
+     * tagged rows are read, in chunks.
+     *
+     * shortcut: re-reads every tagged row for the staff member on each first
+     * batch; move to a feedback_tags table (or a cached tally) if one person's
+     * reviews reach the tens of thousands.
+     *
+     * @return array{complaints: list<array{label: string, count: int}>, praise: list<array{label: string, count: int}>}
+     */
+    private function rankReasons(Builder $query, string $ratingColumn, string $categoryColumn): array
+    {
+        $counts = ['complaints' => [], 'praise' => []];
+
+        (clone $query)->toBase()
+            ->whereNotNull($categoryColumn)
+            ->select(['id', $ratingColumn.' as rating', $categoryColumn.' as category'])
+            ->lazyById(500)
+            ->each(function (object $row) use (&$counts): void {
+                $group = (int) $row->rating >= 4 ? 'praise' : 'complaints';
+                foreach (self::splitTags((string) $row->category) as $tag) {
+                    $counts[$group][$tag] = ($counts[$group][$tag] ?? 0) + 1;
+                }
+            });
+
+        return array_map(function (array $tally): array {
+            // Most picked first; ties alphabetical so the order is stable.
+            uksort($tally, fn (string $a, string $b): int => [$tally[$b], $a] <=> [$tally[$a], $b]);
+
+            return array_map(
+                fn (string $label, int $count): array => ['label' => $label, 'count' => $count],
+                array_keys($tally),
+                array_values($tally),
+            );
+        }, $counts);
+    }
+
+    /**
+     * Split a stored tag list. Before the column was widened the commuter app
+     * cut the joined list at exactly 50 characters, so on a 50-character value
+     * the last tag may be a fragment ("Lo") and is not counted.
+     *
+     * @return list<string>
+     */
+    private static function splitTags(string $category): array
+    {
+        $tags = array_values(array_filter(
+            array_map('trim', explode(',', $category)),
+            fn (string $tag): bool => $tag !== '',
+        ));
+        if (mb_strlen($category) === 50 && count($tags) > 1) {
+            array_pop($tags);
+        }
+
+        return $tags;
     }
 
     private function applyRatingFilter(Builder $query, string $ratingColumn, ?int $rating): void
@@ -367,6 +444,26 @@ class FeedbackService
         if ($rating !== null) {
             $query->where($ratingColumn, $rating);
         }
+    }
+
+    /**
+     * Rows whose tag list contains $reason as a whole tag. Matching on the
+     * ", " separators keeps "Helpful" from also matching "Unhelpful".
+     */
+    private function applyReasonFilter(Builder $query, string $categoryColumn, ?string $reason): void
+    {
+        $reason = trim((string) $reason);
+        if ($reason === '') {
+            return;
+        }
+
+        $like = addcslashes($reason, '\\%_');
+        $query->where(function (Builder $q) use ($categoryColumn, $reason, $like): void {
+            $q->where($categoryColumn, $reason)
+                ->orWhere($categoryColumn, 'like', $like.',%')
+                ->orWhere($categoryColumn, 'like', '%, '.$like)
+                ->orWhere($categoryColumn, 'like', '%, '.$like.',%');
+        });
     }
 
     /**

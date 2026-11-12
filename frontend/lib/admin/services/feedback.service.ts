@@ -41,6 +41,7 @@ interface RawFeedbackListResponse {
     average_rating: number;
     total_count: number;
     distribution: Record<string, number>;
+    reasons?: Record<ReasonGroup, FeedbackReason[]>;
   } | null;
   feedback: RawFeedbackRow[];
   pagination: {
@@ -52,11 +53,21 @@ interface RawFeedbackListResponse {
 
 // ─── Frontend view-model ────────────────────────────────────────────
 
+/** complaints = tags from 1–3 star reviews, praise = from 4–5 star reviews. */
+export type ReasonGroup = "complaints" | "praise";
+
+export interface FeedbackReason {
+  label: string;
+  count: number;
+}
+
 export interface FeedbackRow {
   id: string;
   shiftId: string;
   rating: number;
   category: string | null;
+  /** `category` split into the commuter's selected tags. */
+  tags: string[];
   comment: string | null;
   createdAt: string | null;
   vehicle: { unitNumber: string; plateNumber: string } | null;
@@ -68,6 +79,8 @@ export interface FeedbackSummary {
   totalCount: number;
   /** Keyed "5" → "1" with per-star counts. */
   distribution: Record<string, number>;
+  /** Tags ranked by how often commuters picked them, most first. */
+  reasons: Record<ReasonGroup, FeedbackReason[]>;
 }
 
 export interface FeedbackListResult {
@@ -95,6 +108,8 @@ export interface FeedbackListQuery {
   cursor?: string | null;
   /** 1–5: list only this star level. The summary always covers all ratings. */
   rating?: number;
+  /** A tag label: list only reviews that picked it. Never narrows the summary. */
+  reason?: string;
   /** Cancels a superseded request (filter change, modal closed). */
   signal?: AbortSignal;
 }
@@ -128,12 +143,26 @@ function mapCommuterName(
   return full || "Anonymous";
 }
 
+/**
+ * Before the column was widened, the commuter app cut the joined tags at
+ * exactly 50 characters, so the last tag of a 50-character value may be a
+ * fragment ("Lo"). It is kept but marked with "…" rather than shown as a tag.
+ * Mirrors FeedbackService::splitTags(), which leaves it out of the ranking.
+ */
+function splitTags(category: string | null): string[] {
+  if (!category) return [];
+  const tags = category.split(",").map((tag) => tag.trim()).filter(Boolean);
+  if (category.length === 50 && tags.length > 1) tags[tags.length - 1] += "…";
+  return tags;
+}
+
 function mapRow(raw: RawFeedbackRow): FeedbackRow {
   return {
     id: raw.id,
     shiftId: raw.shift_id,
     rating: raw.rating,
     category: raw.category,
+    tags: splitTags(raw.category),
     comment: raw.comment,
     createdAt: raw.created_at,
     vehicle: raw.vehicle
@@ -154,6 +183,7 @@ function mapResult(raw: RawFeedbackListResponse): FeedbackListResult {
           averageRating: raw.summary.average_rating,
           totalCount: raw.summary.total_count,
           distribution: raw.summary.distribution,
+          reasons: raw.summary.reasons ?? { complaints: [], praise: [] },
         }
       : null,
     feedback: raw.feedback.map(mapRow),
@@ -176,6 +206,7 @@ function buildQueryString(q: FeedbackListQuery): string {
   if (q.perPage) params.set("per_page", String(q.perPage));
   if (q.cursor) params.set("cursor", q.cursor);
   if (q.rating) params.set("rating", String(q.rating));
+  if (q.reason) params.set("reason", q.reason);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }

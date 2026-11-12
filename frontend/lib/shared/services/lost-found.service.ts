@@ -91,6 +91,8 @@ interface RawLostItem {
   // Eager-loaded on every fetch — up to 3 photos, position 0 is the thumbnail
   // (also mirrored onto image_url so single-image read sites keep working).
   photos?: RawPhoto[];
+  // The signed-in commuter's own latest claim on this item (browse + watchlist only).
+  my_claim?: { id: string; status: string } | null;
 }
 
 /** A lost_item_photos row as returned by Laravel (snake_case). */
@@ -207,6 +209,8 @@ export interface LostFoundItem {
   claimableUntil: string | null;
   /** Up to 3 photos, position 0 first (the thumbnail — same URL as imageUrl). */
   photos: { id: string; url: string }[];
+  /** The signed-in commuter's own latest claim (backend status), on the browse + watchlist lists; null otherwise. */
+  myClaim: { id: string; status: string } | null;
 }
 
 /** A claim on a lost item. */
@@ -370,6 +374,7 @@ function mapItem(raw: RawLostItem): LostFoundItem {
     expiredAt: raw.expired_at,
     claimableUntil: raw.claimable_until ?? null,
     photos: (raw.photos ?? []).map((p) => ({ id: p.id, url: p.url })),
+    myClaim: raw.my_claim ?? null,
   };
 }
 

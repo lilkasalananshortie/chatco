@@ -197,6 +197,24 @@ export function ReviewRequestModal({ isOpen, onClose, request, onApprove, onReje
           </div>
         )}
       </div>
+      {/* A Student sign-up's school details, checked against the ID beside
+          them; approving the registration approves these too. */}
+      {!isDiscountRequest && request.studentDetails && (
+        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[#2A3A55] pt-4 admin-light:border-[#E2E8F0]">
+          <div className="col-span-2 min-w-0">
+            <p className={fieldLabelClasses}>School</p>
+            <p className={fieldValueClasses} title={request.studentDetails.school_name}>{request.studentDetails.school_name}</p>
+          </div>
+          <div className="min-w-0">
+            <p className={fieldLabelClasses}>Level</p>
+            <p className={fieldValueClasses}>{educationSummary(request.studentDetails)}</p>
+          </div>
+          <div className="min-w-0">
+            <p className={fieldLabelClasses}>Year / Term</p>
+            <p className={fieldValueClasses}>{schoolYearSummary(request.studentDetails)}</p>
+          </div>
+        </div>
+      )}
     </section>
   );
 

@@ -23,6 +23,8 @@ class SendDiscountApplicationReminders extends Command
             ->where('status', 'PENDING')
             ->where('submitted_at', '<=', $cutoff)
             ->whereHas('commuter.user')
+            // Sign-up school details wait with the registration, which has its own reminders.
+            ->whereRelation('commuter', 'account_status', '!=', 'PENDING')
             ->whereNotExists(function ($query) {
                 // Include read, archived and deleted reminders to avoid repeat alerts.
                 $query->selectRaw('1')->from('announcements')

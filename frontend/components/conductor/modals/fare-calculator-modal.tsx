@@ -2244,12 +2244,20 @@ export default function FareCalcModal({ isOpen, onClose, shiftId, routeId, condu
                   {activeFareInfo.barangaysTraveled} traveled
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-white/40 light:text-gray-500">Commuter Type</span>
-                <span className="text-white/70 light:text-gray-700">
-                  {getCommuterTypeLabel(selectedMethod === "GCash" ? scannedCommuterType : commuterType)}
-                </span>
-              </div>
+              {/* Multiple cash: passengers have mixed types, so show the head count instead. */}
+              {isGroupMode && selectedMethod === "Cash" ? (
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40 light:text-gray-500">Passengers</span>
+                  <span className="text-white/70 light:text-gray-700">{successPassengerCount}</span>
+                </div>
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40 light:text-gray-500">Commuter Type</span>
+                  <span className="text-white/70 light:text-gray-700">
+                    {getCommuterTypeLabel(selectedMethod === "GCash" ? scannedCommuterType : commuterType)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-white/40 light:text-gray-500">Method</span>
                 <span className={selectedMethod === "GCash" ? "text-[#62A0EA] light:text-[#1A5FB4]" : "text-emerald-400 light:text-emerald-700"}>

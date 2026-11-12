@@ -784,9 +784,7 @@ export default function LostAndFoundPage() {
         <div role="alertdialog" aria-modal="true" aria-labelledby="lf-claim-sent-title" aria-describedby="lf-claim-sent-body" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-xl border border-white/10 bg-[#071A2E] shadow-2xl light:border-[#DAEEFF] light:bg-white animate-fade-in">
             <div className="px-6 pt-7 text-center sm:px-8">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 light:text-emerald-600">
-                <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
-              </div>
+              <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-300 light:text-emerald-600" aria-hidden="true" />
               <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300 light:text-emerald-700">Request received</p>
               <h2 id="lf-claim-sent-title" className="mt-1 text-xl font-bold text-white light:text-gray-900">Claim request sent</h2>
               <p id="lf-claim-sent-body" className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/60 light:text-gray-600">
@@ -795,39 +793,40 @@ export default function LostAndFoundPage() {
             </div>
 
             <div className="px-6 pb-6 pt-5 sm:px-8">
-              <div className="rounded-lg border border-white/10 bg-white/[0.035] p-4 light:border-[#DAEEFF] light:bg-[#F0F7FF]">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 light:text-gray-500">Item you claimed</p>
+              <div className="rounded-lg border border-[#1E3A56] bg-[#0B223A] p-4 light:border-[#DAEEFF] light:bg-[#F0F7FF]">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55 light:text-gray-500">Item you claimed</p>
                 <p className="mt-1.5 break-words text-sm font-semibold text-white light:text-gray-900">{submittedClaimItem}</p>
               </div>
 
+              {/* Icons sit straight on the surface; only the current step is blue. */}
               <ol aria-label="Claim progress" className="mt-5 space-y-4">
                 <li className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300 light:text-emerald-700"><Check className="h-4 w-4" aria-hidden="true" /></span>
+                  <Check className="h-5 w-5 shrink-0 text-white/75 light:text-gray-600" strokeWidth={2.25} aria-hidden="true" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold text-white/90 light:text-gray-900">Request sent</span>
-                    <span className="mt-0.5 block text-[10px] text-white/45 light:text-gray-500">Your proof has been submitted</span>
+                    <span className="mt-0.5 block text-[10px] text-white/55 light:text-gray-500">Your proof has been submitted</span>
                   </span>
-                  <span className="text-[10px] font-medium text-emerald-300 light:text-emerald-700">Done</span>
+                  <span className="text-[10px] font-medium text-white/65 light:text-gray-600">Done</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-[#62A0EA]/30 bg-[#62A0EA]/10 text-[#99C1F1] light:text-[#1A5FB4]"><Clock3 className="h-3.5 w-3.5" aria-hidden="true" /></span>
+                <li aria-current="step" className="flex items-center gap-3">
+                  <Clock3 className="h-5 w-5 shrink-0 text-[#99C1F1] light:text-[#1A5FB4]" aria-hidden="true" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold text-white/90 light:text-gray-900">Desk review</span>
-                    <span className="mt-0.5 block text-[10px] text-white/45 light:text-gray-500">Staff will check your claim</span>
+                    <span className="mt-0.5 block text-[10px] text-white/55 light:text-gray-500">Staff will check your claim</span>
                   </span>
-                  <span className="text-[10px] font-medium text-[#99C1F1] light:text-[#1A5FB4]">In progress</span>
+                  <span className="text-[10px] font-semibold text-[#99C1F1] light:text-[#1A5FB4]">In progress</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-white/10 text-white/35 light:border-gray-200 light:text-gray-400"><IdCard className="h-3.5 w-3.5" aria-hidden="true" /></span>
+                  <IdCard className="h-5 w-5 shrink-0 text-white/45 light:text-gray-400" aria-hidden="true" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-semibold text-white/65 light:text-gray-700">Pickup details</span>
-                    <span className="mt-0.5 block text-[10px] text-white/40 light:text-gray-500">Sent after approval</span>
+                    <span className="block text-xs font-semibold text-white/70 light:text-gray-700">Pickup details</span>
+                    <span className="mt-0.5 block text-[10px] text-white/50 light:text-gray-500">Sent after approval</span>
                   </span>
-                  <span className="text-[10px] text-white/35 light:text-gray-400">Next</span>
+                  <span className="text-[10px] text-white/50 light:text-gray-500">Next</span>
                 </li>
               </ol>
 
-              <p className="mt-5 rounded-md border border-amber-300/15 bg-amber-300/[0.06] px-3 py-2.5 text-[11px] leading-5 text-amber-100/75 light:border-amber-200 light:bg-amber-50 light:text-amber-900">
+              <p className="mt-5 rounded-md border border-[#1E3A56] bg-[#0B223A] px-3 py-2.5 text-[11px] leading-5 text-white/80 light:border-[#DAEEFF] light:bg-[#F0F7FF] light:text-gray-700">
                 Bring a valid ID when collecting the item.
               </p>
             </div>
@@ -857,9 +856,7 @@ export default function LostAndFoundPage() {
         <div role="alertdialog" aria-modal="true" aria-labelledby="lf-cancel-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md overflow-hidden rounded-xl border border-white/10 bg-[#071A2E] light:border-gray-200 light:bg-white shadow-2xl">
             <div className="flex items-start gap-4 p-5">
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-400 light:text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
+              <AlertTriangle className="mt-0.5 h-7 w-7 shrink-0 text-red-400 light:text-red-600" aria-hidden="true" />
               <div className="min-w-0">
                 <h2 id="lf-cancel-title" className="text-base font-bold text-white light:text-gray-900">Cancel this claim?</h2>
                 <p className="mt-1.5 text-sm leading-5 text-white/70 light:text-gray-600">
@@ -877,17 +874,18 @@ export default function LostAndFoundPage() {
                 autoFocus
                 onClick={closeCancelClaimModal}
                 disabled={isCancellingClaim}
-                className="h-11 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white light:border-gray-200 light:bg-white light:text-gray-600 light:hover:bg-gray-100 light:hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA]"
+                className="h-11 rounded-xl border border-[#1E3A56] bg-[#0B223A] text-sm font-semibold text-white transition-colors hover:border-white/30 light:border-gray-200 light:bg-white light:text-gray-700 light:hover:bg-gray-50 light:hover:text-gray-900 disabled:cursor-not-allowed disabled:text-white/60 light:disabled:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA]"
               >
                 Keep Claim
               </button>
+              {/* Stays solid red with white text while cancelling, so the label stays readable. */}
               <button
                 onClick={() => void confirmCancelClaim()}
                 disabled={isCancellingClaim}
-                className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold shadow-lg transition-colors ${isCancellingClaim ? "cursor-not-allowed bg-white/10 text-white/30 shadow-none light:bg-gray-100 light:text-gray-400" : "bg-red-500 text-white shadow-red-500/25 hover:bg-red-600"}`}
+                className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-colors ${isCancellingClaim ? "cursor-not-allowed bg-[#B91C1C]" : "bg-[#DC2626] hover:bg-[#B91C1C]"}`}
               >
                 {isCancellingClaim ? (
-                  <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Cancelling...</span>
+                  <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Cancelling…</span>
                 ) : "Yes, Cancel Claim"}
               </button>
             </div>

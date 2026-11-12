@@ -33,6 +33,9 @@ export interface RegisterInput extends RegistrationAgreement {
   /** Optional only for a REGULAR commuter while the admin's "Force Valid ID
    *  Upload" setting is off; the backend enforces who must send one. */
   id_image: File | null;
+  /** A Student's school details (school_name, education_level, grade_level,
+   *  school_year, enrollment_term), the same fields renewal asks for. */
+  student_details?: Record<string, string>;
 }
 
 export interface RegisterResult {
@@ -84,6 +87,9 @@ export async function register(input: RegisterInput): Promise<RegisterResult> {
   formData.append("privacy_version", input.privacy_version);
   if (input.language_preference) formData.append("language_preference", input.language_preference);
   if (input.id_image) formData.append("id_image", await compressImage(input.id_image, IMAGE_COMPRESSION.document));
+  if (input.applied_type === "STUDENT") {
+    for (const [key, value] of Object.entries(input.student_details ?? {})) formData.append(key, value);
+  }
 
   const res = await fetch("/api/auth/register", {
     method: "POST",

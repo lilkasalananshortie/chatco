@@ -57,7 +57,7 @@ class LostItemController extends Controller
         ];
         $perPage = min(max((int) $request->integer('per_page', 15), 1), 50);
 
-        $items = $this->lostItemService->listItems($filters, $perPage);
+        $items = $this->lostItemService->listItems($filters, $perPage, $request->user());
 
         return $this->successResponse($items, 'Lost items retrieved');
     }

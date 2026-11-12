@@ -12,6 +12,8 @@ import CodeInput from "@/components/auth/code-input";
 import { AdminDatePicker } from "@/components/admin/ui/admin-date-picker";
 import { CONTACT_NUMBER_PATTERN, CONTACT_NUMBER_ERROR, formatContactNumberInput } from "@/lib/utils/format";
 import { PASSWORD_RULES } from "@/lib/utils/password-policy";
+import { useDiscountProof } from "@/components/commuter/discount-proof-fields";
+import { EDUCATION_LABELS, ENROLLMENT_TERMS, HIGH_SCHOOL_GRADES, type EducationLevel } from "@/lib/shared/services/student-renewal.service";
 
 // Camera-dependent, so it stays out of the initial bundle and off the server.
 const IdCaptureModal = dynamic(() => import("@/components/auth/id-capture-modal"), {
@@ -64,6 +66,7 @@ const STEP_COPY: Record<number, { title: string; subtitle: string }> = {
  */
 const FIELD_STEP: Record<string, number> = {
   first_name: 1, middle_name: 1, suffix: 1, surname: 1, birthdate: 1, gender: 1, applied_type: 1,
+  school_name: 1, education_level: 1, grade_level: 1, school_year: 1, enrollment_term: 1,
   email: 2, contact_number: 2, id_image: 2,
   username: 4, password: 4, password_confirmation: 4,
 };
@@ -101,6 +104,10 @@ export default function SignupForm({ onBusyChange, initialMaintenanceMessage = n
     password: "",
     confirmPassword: "",
   });
+  // A Student's school details: the same state, rules and payload renewal and
+  // onsite registration use. The proof document is the step 2 ID upload.
+  const school = useDiscountProof();
+  const isStudent = formData.appliedType === "STUDENT";
   const [idImage, setIdImage] = useState<File | null>(null);
   // Admin setting "Force Valid ID Upload" (public via /api/system-status).
   // Defaults to required, so a failed or slow lookup never relaxes the rule.
@@ -254,6 +261,13 @@ export default function SignupForm({ onBusyChange, initialMaintenanceMessage = n
       }
       if (!formData.gender) errors.gender = ["Select your gender."];
       if (!formData.appliedType) errors.applied_type = ["Select the commuter type you're applying for."];
+      if (isStudent) {
+        if (!school.schoolName.trim()) errors.school_name = ["Enter the name of your school."];
+        if (!school.educationLevel) errors.education_level = ["Select your education level."];
+        if (school.educationLevel === "HIGH_SCHOOL" && !school.gradeLevel) errors.grade_level = ["Select your grade level."];
+        if (!school.schoolYear.trim()) errors.school_year = ["Enter the school year."];
+        if (school.educationLevel === "COLLEGE" && !school.term.trim()) errors.enrollment_term = ["Select your enrollment term."];
+      }
     }
 
     if (stepNum === 2) {
@@ -487,6 +501,8 @@ export default function SignupForm({ onBusyChange, initialMaintenanceMessage = n
         password_confirmation: formData.confirmPassword,
         applied_type: formData.appliedType as AppliedType,
         id_image: idImage,
+        // Only text fields here (no document), so every value is a string.
+        student_details: isStudent ? Object.fromEntries(school.formData(true, false)) as Record<string, string> : undefined,
       });
 
       // Success — show pending review screen (no auto-login)
@@ -573,6 +589,13 @@ export default function SignupForm({ onBusyChange, initialMaintenanceMessage = n
   };
 
   const errorRing = (field: string) => (getFieldError(field) ? styles.invalid : "");
+  const clearFieldError = (...fields: string[]) => setFieldErrors((previous) => {
+    if (!fields.some((field) => field in previous)) return previous;
+    const next = { ...previous };
+    for (const field of fields) delete next[field];
+    return next;
+  });
+  const schoolYearStart = new Date().getFullYear();
 
   return (
     <div ref={contentRef} className={styles.form}>
@@ -772,6 +795,73 @@ export default function SignupForm({ onBusyChange, initialMaintenanceMessage = n
                 {getFieldError("applied_type") && <p className={errorClasses}>{getFieldError("applied_type")}</p>}
               </div>
             </div>
+
+            {/* Student only: the school details renewal asks for. The student
+                ID / school form itself is uploaded on step 2. */}
+            {isStudent && (
+              <section aria-labelledby="signup-school-heading" className={styles.schoolDetails}>
+                <h3 id="signup-school-heading" className={styles.schoolHeading}>School details</h3>
+                <p className={styles.schoolNote}>Reviewed with your student ID before your discount is approved.</p>
+                <div className={styles.schoolGrid}>
+                  <div className={styles.wide}>
+                    <label htmlFor="schoolName" className={labelClasses}>School *</label>
+                    <input id="schoolName" type="text" maxLength={150} autoComplete="organization" value={school.schoolName}
+                      onChange={(e) => { school.setSchoolName(e.target.value); clearFieldError("school_name"); }}
+                      className={`${inputClasses} ${errorRing("school_name")}`} placeholder="Name of your school or university" />
+                    {getFieldError("school_name") && <p className={errorClasses}>{getFieldError("school_name")}</p>}
+                  </div>
+                  <div className={school.educationLevel === "HIGH_SCHOOL" ? undefined : styles.wide}>
+                    <label htmlFor="educationLevel" className={labelClasses}>Education level *</label>
+                    <select id="educationLevel" value={school.educationLevel}
+                      onChange={(e) => {
+                        const level = e.target.value as EducationLevel;
+                        school.setEducationLevel(level);
+                        if (level === "COLLEGE") school.setGradeLevel("");
+                        clearFieldError("education_level", "grade_level", "enrollment_term");
+                      }}
+                      className={`${inputClasses} ${errorRing("education_level")}`}>
+                      <option value="" disabled>Select level</option>
+                      {(Object.keys(EDUCATION_LABELS) as EducationLevel[]).map((level) => (
+                        <option key={level} value={level}>{EDUCATION_LABELS[level]}</option>
+                      ))}
+                    </select>
+                    {getFieldError("education_level") && <p className={errorClasses}>{getFieldError("education_level")}</p>}
+                  </div>
+                  {school.educationLevel === "HIGH_SCHOOL" && (
+                    <div>
+                      <label htmlFor="gradeLevel" className={labelClasses}>Grade level *</label>
+                      <select id="gradeLevel" value={school.gradeLevel}
+                        onChange={(e) => { school.setGradeLevel(e.target.value); clearFieldError("grade_level"); }}
+                        className={`${inputClasses} ${errorRing("grade_level")}`}>
+                        <option value="" disabled>Select grade</option>
+                        {HIGH_SCHOOL_GRADES.map((grade) => <option key={grade} value={grade}>Grade {grade}</option>)}
+                      </select>
+                      {getFieldError("grade_level") && <p className={errorClasses}>{getFieldError("grade_level")}</p>}
+                    </div>
+                  )}
+                  <div>
+                    <label htmlFor="schoolYear" className={labelClasses}>School year *</label>
+                    <input id="schoolYear" type="text" maxLength={20} value={school.schoolYear}
+                      onChange={(e) => { school.setSchoolYear(e.target.value); clearFieldError("school_year"); }}
+                      className={`${inputClasses} ${errorRing("school_year")}`} placeholder={`For example, ${schoolYearStart}–${schoolYearStart + 1}`} />
+                    {getFieldError("school_year") && <p className={errorClasses}>{getFieldError("school_year")}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="enrollmentTerm" className={labelClasses}>
+                      Enrollment term {school.educationLevel === "HIGH_SCHOOL" ? <span className={styles.optional}>Optional</span> : "*"}
+                    </label>
+                    <select id="enrollmentTerm" value={school.term}
+                      onChange={(e) => { school.setTerm(e.target.value); clearFieldError("enrollment_term"); }}
+                      className={`${inputClasses} ${errorRing("enrollment_term")}`}>
+                      {/* Optional for high school, so the empty choice stays pickable there. */}
+                      <option value="" disabled={school.educationLevel !== "HIGH_SCHOOL"}>{school.educationLevel === "HIGH_SCHOOL" ? "No term" : "Select term"}</option>
+                      {ENROLLMENT_TERMS.map((term) => <option key={term} value={term}>{term}</option>)}
+                    </select>
+                    {getFieldError("enrollment_term") && <p className={errorClasses}>{getFieldError("enrollment_term")}</p>}
+                  </div>
+                </div>
+              </section>
+            )}
           </Step>
 
           {/* STEP 2 — Contact + ID Upload */}

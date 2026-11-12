@@ -102,9 +102,10 @@ class LostItemService
     /**
      * Paginated browse list for any authenticated role.
      * Filters: status, category, search (item_name/description/vehicle crew).
-     * Eager-loads vehicle. Does NOT expose claimant info (privacy).
+     * Eager-loads vehicle. Does NOT expose claimant info (privacy); a
+     * commuter $viewer only gets their own claim on each item (`my_claim`).
      */
-    public function listItems(array $filters, int $perPage = 15): LengthAwarePaginator
+    public function listItems(array $filters, int $perPage = 15, ?User $viewer = null): LengthAwarePaginator
     {
         $visibleStatuses = [self::ITEM_AVAILABLE, self::ITEM_CLAIMED];
 
@@ -130,7 +131,13 @@ class LostItemService
             $this->applySearchFilter($query, $filters['search']);
         }
 
-        return $query->paginate($perPage);
+        $page = $query->paginate($perPage);
+
+        if ($viewer?->commuterProfile) {
+            $this->attachMyClaims($page->getCollection(), $viewer->commuterProfile->id);
+        }
+
+        return $page;
     }
 
     /**
@@ -427,6 +434,9 @@ class LostItemService
             );
         }
 
+        // Early exit before uploading proof photos; re-checked under the lock below.
+        $this->assertNoOpenClaim($item->id, $profile->id);
+
         // Uploaded before the transaction (network call to R2), same as
         // addPhoto(); deleted again below if the claim fails to save.
         $imageUrls = [];
@@ -436,6 +446,17 @@ class LostItemService
             }
 
             return DB::transaction(function () use ($item, $commuter, $profile, $data, $imageUrls): Claim {
+                // Lock the item so two submits from one commuter (double tap,
+                // two tabs) run one after the other: the second then sees the
+                // first's claim and is refused, instead of both inserting.
+                $item = LostItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
+                if (! in_array($item->status, [self::ITEM_AVAILABLE, self::ITEM_CLAIMED], true)) {
+                    throw LostFoundException::itemNotClaimable(
+                        "This item is {$item->status} and cannot be claimed"
+                    );
+                }
+                $this->assertNoOpenClaim($item->id, $profile->id);
+
                 $claim = Claim::create([
                     'item_id' => $item->id,
                     'claimant_id' => $profile->id,
@@ -482,6 +503,23 @@ class LostItemService
      * The nullable claimant_id clearly distinguishes this record while the
      * retained name/contact/proof preserves accountability.
      */
+    /**
+     * One open (PENDING or APPROVED) claim per commuter per item. A rejected
+     * or cancelled (deleted) claim does not block claiming again; the
+     * rejection cap in claim() limits that instead.
+     */
+    private function assertNoOpenClaim(string $itemId, string $claimantId): void
+    {
+        $hasOpenClaim = Claim::where('item_id', $itemId)
+            ->where('claimant_id', $claimantId)
+            ->whereIn('status', [self::CLAIM_PENDING, self::CLAIM_APPROVED])
+            ->exists();
+
+        if ($hasOpenClaim) {
+            throw LostFoundException::itemNotClaimable('You already have a claim on this item.');
+        }
+    }
+
     public function createManualClaim(User $admin, string $itemId, array $data): Claim
     {
         return DB::transaction(function () use ($admin, $itemId, $data): Claim {
@@ -541,7 +579,8 @@ class LostItemService
             throw LostFoundException::notFound('Commuter profile');
         }
 
-        $query = Claim::with('item.vehicle')
+        // item.photos: the detail modal's carousel needs every photo, not just the cover.
+        $query = Claim::with(['item.vehicle', 'item.photos'])
             ->where('claimant_id', $profile->id)
             ->orderByDesc('created_at');
 
@@ -679,7 +718,8 @@ class LostItemService
             throw LostFoundException::notFound('Commuter profile');
         }
 
-        return LostItemWatchlist::with(['item.vehicle'])
+        // item.photos: the detail modal's carousel needs every photo, not just the cover.
+        $page = LostItemWatchlist::with(['item.vehicle', 'item.photos'])
             ->where('commuter_id', $profile->id)
             ->whereHas('item', function ($query) use ($visibleStatuses, $date, $search, $range, $category, $posted) {
                 $query->whereIn('status', $visibleStatuses);
@@ -697,6 +737,38 @@ class LostItemService
             })
             ->orderByDesc('created_at')
             ->paginate($perPage);
+
+        $this->attachMyClaims($page->getCollection()->pluck('item')->filter(), $profile->id);
+
+        return $page;
+    }
+
+    /**
+     * Stamp each item with the viewer's own latest claim on it (`my_claim`:
+     * id + status, or null), so a card can show "Cancel claim" instead of
+     * "Claim" after a reload. One query for the whole page.
+     *
+     * @param  iterable<LostItem>  $items
+     */
+    private function attachMyClaims(iterable $items, string $claimantId): void
+    {
+        $items = collect($items);
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $latest = Claim::whereIn('item_id', $items->pluck('id'))
+            ->where('claimant_id', $claimantId)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get(['id', 'item_id', 'status'])
+            ->unique('item_id')
+            ->keyBy('item_id');
+
+        foreach ($items as $item) {
+            $claim = $latest->get($item->id);
+            $item->setAttribute('my_claim', $claim ? ['id' => $claim->id, 'status' => $claim->status] : null);
+        }
     }
 
     // ── Admin: claim review ────────────────────────────────────

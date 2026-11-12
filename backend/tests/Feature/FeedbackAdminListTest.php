@@ -388,6 +388,64 @@ class FeedbackAdminListTest extends TestCase
         $this->assertSame(3, $response->json('data.feedback.0.rating'));
     }
 
+    public function test_summary_ranks_reasons_and_reason_filter_matches_whole_tags(): void
+    {
+        $this->seedDriverFeedback(5, [1, 2, 3, 5, 4]);
+        $categories = [
+            1 => 'Overspeeding, Rough Driving, Loud Music',
+            2 => 'Unhelpful, Overspeeding',
+            // Legacy row cut at exactly 50 characters: the "Lou" fragment is not counted.
+            3 => 'Overspeeding, Reckless Driving, Dirty Vehicle, Lou',
+            5 => 'Safe Driving, Helpful',
+            4 => 'Polite',
+        ];
+        foreach ($categories as $rating => $category) {
+            Feedback::where('driver_id', $this->driver->id)->where('rating', $rating)->update(['category' => $category]);
+        }
+        $this->admin();
+        $url = "/api/v1/admin/feedback?driver_id={$this->driver->id}&pagination=cursor";
+
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.summary.reasons.complaints', [
+                ['label' => 'Overspeeding', 'count' => 3],
+                ['label' => 'Dirty Vehicle', 'count' => 1],
+                ['label' => 'Loud Music', 'count' => 1],
+                ['label' => 'Reckless Driving', 'count' => 1],
+                ['label' => 'Rough Driving', 'count' => 1],
+                ['label' => 'Unhelpful', 'count' => 1],
+            ])
+            ->assertJsonPath('data.summary.reasons.praise', [
+                ['label' => 'Helpful', 'count' => 1],
+                ['label' => 'Polite', 'count' => 1],
+                ['label' => 'Safe Driving', 'count' => 1],
+            ]);
+
+        // The filter narrows rows, never the summary; tags match whole, so
+        // "Helpful" does not pick up the "Unhelpful" row.
+        $this->getJson($url.'&reason=Overspeeding')->assertOk()
+            ->assertJsonCount(3, 'data.feedback')
+            ->assertJsonPath('data.summary.total_count', 5);
+        $this->getJson($url.'&reason=Helpful')->assertOk()
+            ->assertJsonCount(1, 'data.feedback')
+            ->assertJsonPath('data.feedback.0.rating', 5);
+        $this->getJson($url.'&reason='.urlencode('Loud Music'))->assertOk()
+            ->assertJsonCount(1, 'data.feedback');
+    }
+
+    public function test_conductor_reasons_come_from_the_conductor_tags(): void
+    {
+        $this->seedConductorFeedback(2, [5, 2]);
+        Feedback::where('conductor_id', $this->conductor->id)->where('conductor_rating', 2)
+            ->update(['conductor_category' => 'Wrong Change, Rude Behavior', 'category' => 'Overspeeding']);
+        $this->admin();
+
+        $this->getJson("/api/v1/admin/feedback?conductor_id={$this->conductor->id}&pagination=cursor&reason=".urlencode('Wrong Change'))
+            ->assertOk()
+            ->assertJsonCount(1, 'data.feedback')
+            ->assertJsonPath('data.summary.reasons.complaints.0', ['label' => 'Rude Behavior', 'count' => 1])
+            ->assertJsonPath('data.summary.reasons.praise.0', ['label' => 'Cleanliness', 'count' => 1]);
+    }
+
     public function test_rating_filter_rejects_values_outside_one_to_five(): void
     {
         $this->admin();

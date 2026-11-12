@@ -5,6 +5,8 @@
 // GET /api/admin/monitoring and exposes a 5-second polling hook.
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toTripDirection } from "@/lib/shared/map/trip-direction";
+import type { LiveVehicleMarker } from "@/components/admin/admin-commuter-map";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -74,6 +76,31 @@ class FleetRateLimitError extends Error {
   constructor(message: string, readonly retrySeconds: number) {
     super(message);
   }
+}
+
+/**
+ * Fleet rows → AdminCommuterMap markers. Units without a GPS fix are dropped
+ * (nothing to plot). Shared by the Monitoring page and the dashboard preview
+ * so both maps show the same units with the same popup data.
+ */
+export function toLiveVehicleMarkers(fleet: FleetVehicle[]): LiveVehicleMarker[] {
+  return fleet.map(v => ({
+    id: v.id,
+    unit_number: v.unit_number,
+    plate_number: v.plate_number,
+    lat: v.lat ?? 0,
+    lng: v.lng ?? 0,
+    speed: v.speed,
+    capacity: v.capacity_status,
+    route_name: v.route_name,
+    driver_name: v.driver_name,
+    conductor_name: v.conductor_name,
+    is_on_break: v.is_on_break,
+    break_duration_minutes: v.break_duration_minutes,
+    is_stale: v.is_stale,
+    minutes_since_update: v.minutes_since_update,
+    trip_direction: toTripDirection(v.trip_direction),
+  })).filter(v => v.lat !== 0 && v.lng !== 0);
 }
 
 // ─── Polling hook ─────────────────────────────────────────────────────

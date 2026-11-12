@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\AdminProfile;
 use App\Models\CommuterProfile;
 use App\Models\ConductorProfile;
+use App\Models\DiscountApplication;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -572,6 +573,36 @@ class AdminRegistrationTest extends TestCase
             ->getJson('/api/v1/admin/registrations/rejected')
             ->assertOk()
             ->assertJsonPath('data.total', 2);
+    }
+
+    public function test_signup_school_details_are_shown_and_decided_with_the_registration(): void
+    {
+        $approved = $this->seedPendingCommuter(['email' => 'student.a@example.com', 'username' => 'student.a']);
+        $rejected = $this->seedPendingCommuter(['email' => 'student.b@example.com', 'username' => 'student.b']);
+        foreach ([$approved, $rejected] as $user) {
+            DiscountApplication::create([
+                'commuter_id' => $user->id, 'request_type' => 'APPLICATION', 'requested_type' => 'STUDENT', 'status' => 'PENDING',
+                'school_name' => 'Calumpit National High School', 'education_level' => 'HIGH_SCHOOL', 'grade_level' => 11,
+                'school_year' => '2026-2027', 'submitted_at' => now(), 'first_submitted_at' => now(),
+            ]);
+        }
+
+        // The reviewer sees the school details next to the ID…
+        $this->actingAs($this->admin)->getJson("/api/v1/admin/registrations?id={$approved->id}")->assertOk()
+            ->assertJsonPath('data.data.0.student_details.school_name', 'Calumpit National High School')
+            ->assertJsonPath('data.data.0.student_details.grade_level', 11);
+
+        // …and not again in the Discount applications queue.
+        $this->actingAs($this->admin)->getJson('/api/v1/admin/discount-applications')->assertOk()->assertJsonPath('data.total', 0);
+        $pendingId = DiscountApplication::where('commuter_id', $approved->id)->value('id');
+        $this->actingAs($this->admin)->postJson("/api/v1/admin/discount-applications/{$pendingId}/review", ['decision' => 'APPROVED', 'revision' => 1])
+            ->assertStatus(409);
+
+        $this->actingAs($this->admin)->postJson("/api/v1/admin/registrations/{$approved->id}/approve")->assertOk();
+        $this->actingAs($this->admin)->postJson("/api/v1/admin/registrations/{$rejected->id}/reject", ['rejection_reason' => 'School ID does not match the name given.'])->assertOk();
+
+        $this->assertDatabaseHas('discount_applications', ['commuter_id' => $approved->id, 'status' => 'APPROVED', 'reviewed_by' => $this->admin->id]);
+        $this->assertDatabaseHas('discount_applications', ['commuter_id' => $rejected->id, 'status' => 'REJECTED', 'reason' => 'School ID does not match the name given.']);
     }
 
     public function test_reject_sets_status_rejected_and_records_reason(): void

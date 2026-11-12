@@ -303,8 +303,9 @@ export function useFeedback(initialToken?: string) {
    * driver's and conductor's profiles — the daily crew registered on the
    * unit for today.
    *
-   * `category` carries the selected tag labels (comma-joined, truncated to
-   * the backend's max:50) so the tag selection isn't lost.
+   * `category` carries the selected tag labels, comma-joined and whole. The
+   * backend allows 255 characters, which fits every preset tag at once, so
+   * nothing is cut (it used to be cut at 50, mid-tag).
    *
    * On 201 → flip to the success state (countdown back to /dashboard).
    * On 409 (already_submitted) → inline error; the commuter can scan
@@ -324,13 +325,13 @@ export function useFeedback(initialToken?: string) {
         comment: comment.trim() || undefined,
         category:
           selectedTags.length > 0
-            ? selectedTags.join(", ").slice(0, 50)
+            ? selectedTags.join(", ")
             : undefined,
         conductorRating,
         conductorComment: conductorComment.trim() || undefined,
         conductorCategory:
           conductorSelectedTags.length > 0
-            ? conductorSelectedTags.join(", ").slice(0, 50)
+            ? conductorSelectedTags.join(", ")
             : undefined,
       });
       setIsSubmitted(true);

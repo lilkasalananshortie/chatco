@@ -10,6 +10,7 @@ use App\Exceptions\RegistrationPendingException;
 use App\Models\AdminProfile;
 use App\Models\CommuterProfile;
 use App\Models\ConductorProfile;
+use App\Models\DiscountApplication;
 use App\Models\SharedRideLink;
 use App\Models\ShiftLog;
 use App\Models\User;
@@ -459,6 +460,27 @@ class AuthService
                     'privacy_acknowledged_at' => $agreedAt,
                     'registration_confirmed_at' => $agreedAt,
                 ]);
+
+                // School details go where renewals and discount applications
+                // keep theirs. It stays PENDING with the registration and is
+                // decided by approveRegistration()/rejectRegistration(), so the
+                // admin reviews it once, next to the ID. The ID image is the
+                // proof, so no separate document is stored.
+                if ($data['applied_type'] === 'STUDENT') {
+                    DiscountApplication::create([
+                        'commuter_id' => $profile->id,
+                        'request_type' => 'APPLICATION',
+                        'requested_type' => 'STUDENT',
+                        'status' => 'PENDING',
+                        'school_name' => $data['school_name'],
+                        'education_level' => $data['education_level'],
+                        'grade_level' => $data['grade_level'] ?? null,
+                        'school_year' => $data['school_year'],
+                        'enrollment_term' => ($data['enrollment_term'] ?? null) ?: null,
+                        'submitted_at' => $agreedAt,
+                        'first_submitted_at' => $agreedAt,
+                    ]);
+                }
 
                 $applicantName = trim($profile->first_name.' '.$profile->surname);
                 DB::afterCommit(fn () => $this->announcementService->notifyAdmins(

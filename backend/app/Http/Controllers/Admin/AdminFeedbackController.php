@@ -22,7 +22,9 @@ use Illuminate\Validation\ValidationException;
  * driver/conductor feedback directly from User Management by double-clicking
  * a row. One of conductor_id / driver_id is required (mutually exclusive —
  * if both are passed, conductor_id wins). Optional rating=1..5 narrows the
- * paginated rows to one star level; the summary still covers all ratings.
+ * paginated rows to one star level; optional reason={tag} narrows them to
+ * reviews that picked that tag. The summary still covers all ratings and
+ * carries `reasons` (tags ranked by count, complaints vs praise).
  *
  * pagination=cursor (+ cursor={next_cursor}) switches to keyset pagination
  * for the admin modal's infinite scroll: no COUNT query per batch, constant
@@ -54,8 +56,10 @@ class AdminFeedbackController extends Controller
             'rating' => ['nullable', 'integer', 'between:1,5'],
             'pagination' => ['nullable', 'in:page,cursor'],
             'cursor' => ['nullable', 'string', 'max:512'],
+            'reason' => ['nullable', 'string', 'max:100'],
         ]);
         $rating = isset($validated['rating']) ? (int) $validated['rating'] : null;
+        $reason = $validated['reason'] ?? null;
         $cursorMode = ($validated['pagination'] ?? 'page') === 'cursor';
         $cursor = $cursorMode ? $this->decodeCursor($validated['cursor'] ?? null) : null;
 
@@ -69,8 +73,8 @@ class AdminFeedbackController extends Controller
 
         try {
             $result = $conductorId
-                ? $this->feedbackService->listForConductor($conductorId, $perPage, $rating, $cursorMode, $cursor)
-                : $this->feedbackService->listForDriver($driverId, $perPage, $rating, $cursorMode, $cursor);
+                ? $this->feedbackService->listForConductor($conductorId, $perPage, $rating, $cursorMode, $cursor, $reason)
+                : $this->feedbackService->listForDriver($driverId, $perPage, $rating, $cursorMode, $cursor, $reason);
         } catch (FeedbackException $e) {
             return $this->errorResponse($e->getMessage(), 404);
         }

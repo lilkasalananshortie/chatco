@@ -114,12 +114,12 @@ function FeedbackContent() {
           <div className="w-14 h-14 rounded-full border-4 border-[#62A0EA] border-t-transparent light:border-[#1A5FB4] light:border-t-transparent animate-spin" />
           <h3 className="text-white font-bold text-base mt-5 light:text-gray-900">
             {scanStatus === "verifying"
-              ? "Verifying QR signature…"
-              : "Resolving today's crew…"}
+              ? "Reading the QR code…"
+              : "Finding today's crew…"}
           </h3>
           <p className="text-white/50 text-sm light:text-gray-500 mt-1.5 max-w-xs">
             {scanStatus === "verifying"
-              ? "Checking the QR is genuine and not expired."
+              ? "Checking which unit you scanned."
               : "Looking up the driver and conductor on duty."}
           </p>
         </div>
@@ -248,15 +248,16 @@ function FeedbackContent() {
 
           {/* Step progress — the form rates two people, which was previously
               only discoverable by scrolling until the conductor block appeared. */}
-          <div className="flex items-center gap-2 mt-4">
-            <StepChip label="Driver" isDone={driverComplete} isActive={!driverComplete} />
-            <div className={`h-px flex-1 transition-colors ${driverComplete ? "bg-emerald-500/40" : "bg-white/10 light:bg-gray-200"}`} />
+          <ol aria-label="Rating progress" className="mt-4 flex items-center gap-2.5 text-xs">
+            <StepChip label="Driver" number={1} isDone={driverComplete} isActive={!driverComplete} />
+            <li aria-hidden="true" className="h-px flex-1 bg-white/15 light:bg-gray-200" />
             <StepChip
               label="Conductor"
+              number={2}
               isDone={conductorComplete}
               isActive={driverComplete && !conductorComplete}
             />
-          </div>
+          </ol>
         </div>
       </div>
 
@@ -270,14 +271,11 @@ function FeedbackContent() {
             driver's name misrepresented what is being asked. */}
         {crew && (
           <div className="bg-[#071A2E] border border-white/10 rounded-2xl p-4 shadow-lg light:bg-white light:border-gray-200 light:shadow-black/5 animate-fade-in">
-            <div className="flex items-center gap-2 pb-3 mb-3 border-b border-white/5 light:border-gray-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 light:text-gray-500">
-                {crew.unitNumber ? `Unit ${crew.unitNumber}` : "Unit"}
-              </span>
-              <span className="text-[10px] font-mono text-[#62A0EA] light:text-[#1A5FB4] bg-[#1A5FB4]/10 border border-[#1A5FB4]/20 rounded px-1.5 py-0.5">
-                {crew.plateNumber}
-              </span>
-            </div>
+            <p className="pb-3 mb-3 border-b border-white/5 light:border-gray-100 text-xs text-white/55 light:text-gray-500">
+              {crew.unitNumber ? `Unit ${crew.unitNumber}` : "Unit"}
+              <span aria-hidden="true" className="mx-1.5 text-white/30 light:text-gray-300">·</span>
+              <span className="font-mono text-white/80 light:text-gray-800">{crew.plateNumber}</span>
+            </p>
             <div className="space-y-2.5">
               <CrewMemberRow role="Driver" name={crew.driverName} isRated={driverComplete} />
               <CrewMemberRow role="Conductor" name={crew.conductorName} isRated={conductorComplete} />
@@ -300,7 +298,7 @@ function FeedbackContent() {
             onToggleTag={toggleTag}
             comment={comment}
             onCommentChange={setComment}
-            commentPlaceholder="Tell us more about your experience…"
+            commentPlaceholder="Tell us more about the driver…"
           />
 
           {/* ─── CONDUCTOR RATING — mirrors the driver section above, shown
@@ -351,7 +349,8 @@ function FeedbackContent() {
                 type="button"
                 onClick={submitFeedback}
                 disabled={isSubmitting || !conductorComplete}
-                className="w-full py-4 rounded-xl text-base font-bold bg-[#FF6D3A] text-white hover:bg-[#e55a2b] transition-colors shadow-lg shadow-[#FF6D3A]/30 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+                // CHATCO Blue: Signal Orange is reserved for Pick Me Up.
+                className="w-full py-4 rounded-xl text-base font-bold bg-[#1A5FB4] text-white hover:bg-[#164A8F] transition-colors disabled:cursor-not-allowed disabled:bg-[#123150] disabled:text-white/70 light:disabled:bg-gray-200 light:disabled:text-gray-600 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -368,7 +367,7 @@ function FeedbackContent() {
                 <p className="text-white/40 text-xs text-center light:text-gray-500">
                   {conductorRating === 0
                     ? "Rate the conductor to submit."
-                    : "Pick at least one conductor tag to submit."}
+                    : "Pick at least one reason for the conductor's rating to submit."}
                 </p>
               )}
             </div>
@@ -403,29 +402,33 @@ export default function FeedbackPage() {
 
 // ─── Small presentational helpers (local to this page) ────────────
 
-/** One step in the header's Driver → Conductor progress row. */
+/** One step in the header's Driver → Conductor progress row: plain text, a
+ *  check once done, CHATCO Blue only on the current step. */
 function StepChip({
   label,
+  number,
   isDone,
   isActive,
 }: {
   label: string;
+  number: number;
   isDone: boolean;
   isActive: boolean;
 }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+    <li
+      aria-current={isActive ? "step" : undefined}
+      className={`flex items-center gap-1.5 transition-colors ${
         isDone
-          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 light:text-emerald-700"
+          ? "text-white/75 light:text-gray-600"
           : isActive
-            ? "bg-[#1A5FB4]/15 border-[#1A5FB4]/40 text-[#62A0EA] light:bg-[#1A5FB4]/10 light:text-[#1A5FB4]"
-            : "bg-white/5 border-white/10 text-white/30 light:bg-gray-100 light:border-gray-200 light:text-gray-400"
+            ? "font-semibold text-[#99C1F1] light:text-[#1A5FB4]"
+            : "text-white/50 light:text-gray-500"
       }`}
     >
-      {isDone && <Check size={11} strokeWidth={3} />}
-      {label}
-    </span>
+      {isDone ? <Check size={14} strokeWidth={2.5} aria-hidden="true" /> : <span className="tabular-nums">{number} ·</span>}
+      {isDone ? `${label} rated` : label}
+    </li>
   );
 }
 
@@ -441,21 +444,17 @@ function CrewMemberRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div
-        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 border transition-colors ${
-          isRated
-            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 light:text-emerald-600"
-            : "bg-[#1A5FB4] border-white/10 text-white"
-        }`}
-      >
-        {isRated ? <Check size={15} strokeWidth={3} /> : (name[0] ?? "?")}
+      {/* Initial avatar; the "Rated" mark on the right carries the state. */}
+      <div aria-hidden="true" className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-[#10263D] text-white light:bg-gray-100 light:text-gray-700">
+        {name[0] ?? "?"}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-white text-sm font-semibold truncate light:text-gray-900">{name}</p>
-        <p className="text-white/30 text-[11px] light:text-gray-500">{role}</p>
+        <p className="text-white/50 text-[11px] light:text-gray-500">{role}</p>
       </div>
       {isRated && (
-        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 light:text-emerald-600">
+        <span className="flex items-center gap-1 text-[11px] text-white/70 light:text-gray-600">
+          <Check size={13} strokeWidth={2.5} aria-hidden="true" />
           Rated
         </span>
       )}

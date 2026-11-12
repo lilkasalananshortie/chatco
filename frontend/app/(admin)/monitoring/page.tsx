@@ -8,8 +8,7 @@ import {
   Gauge, MapPin, AlertCircle, Coffee, Search, X, LocateFixed,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
-import { useFleetPoll } from '@/lib/admin/services/monitoring.service';
-import { toTripDirection } from '@/lib/shared/map/trip-direction';
+import { useFleetPoll, toLiveVehicleMarkers } from '@/lib/admin/services/monitoring.service';
 import {
   useMonitoringData,
   type DemandZone,
@@ -37,6 +36,10 @@ const AdminCommuterMap = dynamic<{
 // recorded overspeed rows carry their own `threshold`, so this only tints the
 // live readout.
 const SPEED_LIMIT_KMH = 50;
+
+// Fleet table filter buttons: solid surfaces, Sky Blue only on the selected one.
+const MONITOR_FILTER_ON = 'bg-[#62A0EA] font-semibold text-[#0B1120] admin-light:bg-[#1A5FB4] admin-light:text-white';
+const MONITOR_FILTER_OFF = 'bg-[#0E1628] font-medium text-slate-300 hover:text-white admin-light:bg-white admin-light:text-slate-600 admin-light:hover:text-slate-900';
 
 function TableHeading({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <th scope="col" className={`sticky top-0 z-10 border-b border-[#26354D] admin-light:border-[#E2E8F0] bg-[#101A2B] admin-light:bg-[#F8FAFC] px-5 py-3 text-xs font-medium text-slate-400 admin-light:text-slate-500 ${className}`}>{children}</th>;
@@ -139,26 +142,7 @@ export default function MonitoringPage() {
   }, [fleet, breakUnits, filterBreakOnly, fleetSearch]);
 
   // Map fleet data to the map component's LiveVehicleMarker format
-  const liveMapVehicles = useMemo(() =>
-    fleet.map(v => ({
-      id: v.id,
-      unit_number: v.unit_number,
-      plate_number: v.plate_number,
-      lat: v.lat ?? 0,
-      lng: v.lng ?? 0,
-      speed: v.speed,
-      capacity: v.capacity_status,
-      route_name: v.route_name,
-      driver_name: v.driver_name,
-      conductor_name: v.conductor_name,
-      is_on_break: v.is_on_break,
-      break_duration_minutes: v.break_duration_minutes,
-      is_stale: v.is_stale,
-      minutes_since_update: v.minutes_since_update,
-      trip_direction: toTripDirection(v.trip_direction),
-    })).filter(v => v.lat !== 0 && v.lng !== 0),
-    [fleet]
-  );
+  const liveMapVehicles = useMemo(() => toLiveVehicleMarkers(fleet), [fleet]);
 
   const filteredOverspeedHistory = data.overspeedHistory;
 
@@ -330,9 +314,10 @@ export default function MonitoringPage() {
               <input type="search" aria-label="Search active fleet" placeholder="Search unit, plate, crew, or route" value={fleetSearch} onChange={(event) => setFleetSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent py-2 text-xs text-slate-200 admin-light:text-slate-700 outline-none placeholder:text-slate-500" />
               {fleetSearch && <button type="button" aria-label="Clear fleet search" onClick={() => setFleetSearch('')} className="rounded p-1 text-slate-400 admin-light:text-slate-500 hover:text-white admin-light:hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] admin-light:focus-visible:ring-[#1A5FB4]"><X size={13} /></button>}
             </label>
-            <div role="group" aria-label="Filter active vehicles" className="flex items-center gap-1">
-              <button type="button" aria-pressed={!filterBreakOnly} onClick={() => setFilterBreakOnly(false)} className={`min-h-9 rounded-md px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] admin-light:focus-visible:ring-[#1A5FB4] ${!filterBreakOnly ? 'bg-white/8 admin-light:bg-slate-100 text-white admin-light:text-slate-900' : 'text-slate-400 admin-light:text-slate-500 hover:bg-white/5 admin-light:hover:bg-[#F8FAFC] hover:text-slate-200 admin-light:hover:text-slate-700'}`}>All units <span className="ml-1 text-slate-500 tabular-nums">{fleet.length}</span></button>
-              <button type="button" aria-pressed={filterBreakOnly} onClick={() => setFilterBreakOnly(true)} className={`flex min-h-9 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] admin-light:focus-visible:ring-[#1A5FB4] ${filterBreakOnly ? 'bg-sky-400/10 text-sky-300 admin-light:text-sky-700' : 'text-slate-400 admin-light:text-slate-500 hover:bg-white/5 admin-light:hover:bg-[#F8FAFC] hover:text-slate-200 admin-light:hover:text-slate-700'}`}><Coffee size={13} />On break <span className="ml-1 tabular-nums">{breakCount}</span></button>
+            {/* Solid segmented filter: Sky Blue marks only the selected option. */}
+            <div role="group" aria-label="Filter active vehicles" className="inline-flex items-center gap-0.5 rounded-lg border border-[#2A3A52] admin-light:border-[#E2E8F0] bg-[#0E1628] admin-light:bg-white p-0.5">
+              <button type="button" aria-pressed={!filterBreakOnly} onClick={() => setFilterBreakOnly(false)} className={`min-h-8 rounded-md px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] admin-light:focus-visible:ring-[#1A5FB4] ${!filterBreakOnly ? MONITOR_FILTER_ON : MONITOR_FILTER_OFF}`}>All units <span className="ml-1 tabular-nums">{fleet.length}</span></button>
+              <button type="button" aria-pressed={filterBreakOnly} onClick={() => setFilterBreakOnly(true)} className={`flex min-h-8 items-center gap-1.5 rounded-md px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] admin-light:focus-visible:ring-[#1A5FB4] ${filterBreakOnly ? MONITOR_FILTER_ON : MONITOR_FILTER_OFF}`}><Coffee size={13} aria-hidden="true" />On break <span className="ml-1 tabular-nums">{breakCount}</span></button>
             </div>
           </div>
         </div>
@@ -354,7 +339,7 @@ export default function MonitoringPage() {
                   <p className="mt-1 text-xs text-slate-500">{fleet.length === 0 ? 'Active units will appear here when their shift starts.' : 'Try another search or switch to all units.'}</p>
                 </td></tr>
               ) : filteredFleet.map((v) => (
-                <tr key={v.id} id={`fleet-unit-${v.id}`} onClick={() => handleFocusVehicle(v)} className={`group transition-colors ${v.has_gps ? 'cursor-pointer' : ''} ${focusedVehicleId === v.id ? 'bg-[#62A0EA]/10 admin-light:bg-[#1A5FB4]/10 ring-1 ring-inset ring-[#62A0EA]/40 admin-light:ring-[#1A5FB4]/40' : v.is_on_break ? 'bg-sky-400/5 hover:bg-sky-400/10' : 'hover:bg-white/3 admin-light:hover:bg-[#F8FAFC]'}`}>
+                <tr key={v.id} id={`fleet-unit-${v.id}`} onClick={() => handleFocusVehicle(v)} className={`group transition-colors ${v.has_gps ? 'cursor-pointer' : ''} ${focusedVehicleId === v.id ? 'bg-[#62A0EA]/10 admin-light:bg-[#1A5FB4]/10 ring-1 ring-inset ring-[#62A0EA]/40 admin-light:ring-[#1A5FB4]/40' : 'hover:bg-white/3 admin-light:hover:bg-[#F8FAFC]'}`}>
                   <td className="px-5 py-4"><p className="truncate text-sm font-semibold text-white admin-light:text-slate-900" title={v.unit_number}>{v.unit_number}</p><p className="mt-1 truncate font-mono text-[11px] text-slate-400 admin-light:text-slate-500" title={v.plate_number}>{v.plate_number}</p></td>
                   <td className="px-5 py-4">
                     <p className="truncate text-sm text-slate-200 admin-light:text-slate-700" title={v.driver_name ?? undefined}>{v.driver_name ?? 'Unassigned driver'}</p>
@@ -363,9 +348,9 @@ export default function MonitoringPage() {
                   <td className="pl-5 pr-8 py-4 text-right whitespace-nowrap"><span className={`text-sm font-semibold tabular-nums ${v.speed !== null && v.speed > SPEED_LIMIT_KMH ? 'text-red-300 admin-light:text-red-700' : 'text-slate-200 admin-light:text-slate-700'}`}>{v.speed ?? '—'}</span>{v.speed !== null && <span className="ml-1 text-[10px] text-slate-500">km/h</span>}</td>
                   <td className="px-5 py-4"><span className={`text-xs font-medium ${v.capacity_status === 'AVAILABLE' ? 'text-emerald-300 admin-light:text-emerald-700' : v.capacity_status === 'STANDING' ? 'text-amber-300 admin-light:text-amber-700' : 'text-red-300 admin-light:text-red-700'}`}>{v.capacity_status === 'AVAILABLE' ? 'Available' : v.capacity_status === 'STANDING' ? 'Standing' : 'Full'}</span></td>
                   <td className="px-5 py-4">
-                    {v.is_on_break ? <div><span className="text-xs font-medium text-sky-300 admin-light:text-sky-700">On break</span><p className="mt-1 text-[11px] text-slate-400 admin-light:text-slate-500">{formatElapsedMinutes(v.break_duration_minutes)} elapsed</p></div> : !v.has_gps ? <span className="text-xs text-slate-400 admin-light:text-slate-500">Awaiting GPS</span> : v.is_stale ? (
+                    {v.is_on_break ? <div><span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-200 admin-light:text-slate-700"><Coffee size={13} aria-hidden="true" className="text-slate-400 admin-light:text-slate-500" />On break</span><p className="mt-1 text-[11px] text-slate-400 admin-light:text-slate-500">{formatElapsedMinutes(v.break_duration_minutes)} elapsed</p></div> : !v.has_gps ? <span className="text-xs text-slate-400 admin-light:text-slate-500">Awaiting GPS</span> : v.is_stale ? (
                       <div><span className="text-xs font-medium text-amber-300 admin-light:text-amber-700">GPS delayed</span><p className="mt-1 text-[11px] text-slate-400 admin-light:text-slate-500">{formatElapsedMinutes(v.minutes_since_update)} ago</p></div>
-                    ) : <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300 admin-light:text-emerald-700"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Live</span>}
+                    ) : <span className="text-xs text-slate-200 admin-light:text-slate-700">Live</span>}
                   </td>
                   <td className="px-2 py-4"><button type="button" onClick={(event) => { event.stopPropagation(); handleFocusVehicle(v); }} disabled={!v.has_gps} aria-label={`Locate unit ${v.unit_number} on map`} title={v.has_gps ? 'Locate on map' : 'No GPS position reported'} className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 admin-light:text-slate-500 transition-colors hover:bg-[#62A0EA]/10 admin-light:hover:bg-[#1A5FB4]/10 hover:text-[#99C1F1] admin-light:hover:text-[#164A8F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] admin-light:focus-visible:ring-[#1A5FB4] disabled:cursor-default disabled:opacity-25"><LocateFixed size={16} /></button></td>
                 </tr>

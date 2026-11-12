@@ -24,6 +24,8 @@ export interface LostItem {
   photos?: { id: string; url: string }[];
   /** Last day this unclaimed item stays listed; null once it has a claim. */
   claimableUntil?: string | null;
+  /** The commuter's own latest claim (backend status), from the browse + watchlist lists. */
+  myClaim?: { id: string; status: string } | null;
 }
 
 export interface ClaimData {

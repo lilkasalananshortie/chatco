@@ -211,7 +211,7 @@ export default function ConductorMap({
         {visibleHails.map((hail) => (
           <Marker key={hail.id} position={[hail.latitude, hail.longitude]} icon={hailingIcon} zIndexOffset={1000}>
             <Popup closeButton={false}>
-              <div className="min-w-[180px]">
+              <div className="min-w-[180px] py-1.5">
                 <div className="font-bold text-[#FF6D3A]">Commuter</div>
               </div>
             </Popup>

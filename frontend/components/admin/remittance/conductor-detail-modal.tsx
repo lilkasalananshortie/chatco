@@ -470,7 +470,7 @@ export function ConductorDetailModal({ isOpen, onClose, record }: ConductorDetai
                         txns.length === 0 ? (
                           <p className="border-t border-[#2A3A55] admin-light:border-[#E2E8F0] py-4 text-center text-xs text-slate-500">No transactions.</p>
                         ) : (
-                          <ol className="max-h-64 divide-y divide-[#2A3A55] admin-light:divide-[#E2E8F0] overflow-y-auto border-t border-[#2A3A55] admin-light:border-[#E2E8F0] bg-[#0E1628] admin-light:bg-[#F8FAFC] scrollbar-themed">
+                          <ol className="divide-y divide-[#2A3A55] admin-light:divide-[#E2E8F0] border-t border-[#2A3A55] admin-light:border-[#E2E8F0] bg-[#0E1628] admin-light:bg-[#F8FAFC]">
                             {txns.map((txn) => {
                               const style = PAYMENT_STYLES[paymentKind(txn.payment_method)];
                               const pax = txn.total_passengers ?? 1;

@@ -514,6 +514,77 @@ class LostFoundFlowTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_commuter_cannot_open_a_second_claim_on_the_same_item(): void
+    {
+        $item = $this->createItem();
+        $this->commuter();
+
+        $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'My keychain is on the zipper'])->assertStatus(201);
+        $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'My keychain is on the zipper'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'You already have a claim on this item.');
+
+        $this->assertSame(1, Claim::where('item_id', $item->id)->count());
+
+        // Another commuter can still claim the same item.
+        $this->otherCommuter();
+        $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'Mine has a red tag'])->assertStatus(201);
+    }
+
+    public function test_commuter_can_claim_again_after_cancelling_or_being_rejected(): void
+    {
+        $item = $this->createItem();
+        $this->commuter();
+        $claimId = $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'My keychain is on the zipper'])->json('data.id');
+
+        $this->deleteJson("/api/v1/lost-found/claims/{$claimId}")->assertSuccessful();
+        $claimId = $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'My keychain is on the zipper'])->assertStatus(201)->json('data.id');
+
+        $this->admin();
+        $this->patchJson("/api/v1/admin/lost-items/{$item->id}/claims/{$claimId}/reject", ['reason' => 'Proof does not match'])->assertSuccessful();
+
+        $this->commuter();
+        $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'Navy, with a torn side pocket'])->assertStatus(201);
+    }
+
+    public function test_browse_and_saved_items_carry_the_commuters_own_claim_after_a_reload(): void
+    {
+        $item = $this->createItem();
+        $this->commuter();
+        $this->postJson("/api/v1/lost-found/{$item->id}/watchlist")->assertSuccessful();
+        $claimId = $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'My keychain is on the zipper'])->json('data.id');
+
+        // A fresh request stands in for the page refresh.
+        $this->getJson('/api/v1/lost-found')->assertOk()
+            ->assertJsonPath('data.data.0.my_claim', ['id' => $claimId, 'status' => 'PENDING']);
+        $this->getJson('/api/v1/commuter/watchlist')->assertOk()
+            ->assertJsonPath('data.data.0.item.my_claim', ['id' => $claimId, 'status' => 'PENDING']);
+
+        // Other commuters only ever see their own (none) — no one else's claim leaks.
+        $this->otherCommuter();
+        $this->getJson('/api/v1/lost-found')->assertOk()->assertJsonPath('data.data.0.my_claim', null);
+    }
+
+    public function test_every_commuter_tab_returns_all_item_photos_for_the_carousel(): void
+    {
+        $item = $this->createItem();
+        foreach (range(1, 3) as $n) {
+            $this->post("/api/v1/admin/lost-items/{$item->id}/photos", ['image' => UploadedFile::fake()->image("photo{$n}.jpg")], ['Accept' => 'application/json'])
+                ->assertSuccessful();
+        }
+
+        $this->commuter();
+        $this->postJson("/api/v1/lost-found/{$item->id}/watchlist")->assertSuccessful();
+        $this->postJson("/api/v1/lost-found/{$item->id}/claim", ['proof' => 'My keychain is on the zipper'])->assertSuccessful();
+
+        // Browse, Saved and My claims all open the same detail modal.
+        $this->getJson('/api/v1/lost-found')->assertOk()->assertJsonCount(3, 'data.data.0.photos');
+        $this->getJson('/api/v1/commuter/watchlist')->assertOk()->assertJsonCount(3, 'data.data.0.item.photos');
+        $this->getJson('/api/v1/commuter/claims')->assertOk()
+            ->assertJsonCount(3, 'data.data.0.item.photos')
+            ->assertJsonPath('data.data.0.item.photos.0.position', 0);
+    }
+
     public function test_commuter_can_claim_with_proof_photos(): void
     {
         $item = $this->createItem();

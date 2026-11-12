@@ -377,6 +377,34 @@ class AdminFleetPaginationTest extends TestCase
         }
     }
 
+    public function test_fleet_search_matches_full_names_across_name_columns(): void
+    {
+        $admin = $this->makeAdmin();
+        $driver = $this->makeDriver(1);
+        $driver->update(['first_name' => 'Mark', 'last_name' => 'Arone']);
+        $conductor = $this->makeConductor(1);
+        $conductor->update(['first_name' => 'Mark', 'last_name' => 'Bautista']);
+        $this->makeDriver(2);
+        $route = Route::create(['name' => 'Search Route', 'status' => 'ACTIVE']);
+        Vehicle::create([
+            'unit_number' => 'UNIT-MARK', 'plate_number' => 'SRC-001', 'route_id' => $route->id,
+            'status' => 'ACTIVE', 'driver_id' => $driver->id,
+        ]);
+        Vehicle::create(['unit_number' => 'UNIT-OTHER', 'plate_number' => 'SRC-002', 'route_id' => $route->id, 'status' => 'ACTIVE']);
+
+        // Partial, full, and reversed full names all narrow to the right person.
+        foreach (['mark aro' => 1, 'Mark Arone' => 1, 'arone mark' => 1, 'mark' => 2, 'mark zzz' => 0] as $search => $total) {
+            $this->actingAs($admin)->getJson('/api/v1/admin/personnel?search='.urlencode($search))
+                ->assertOk()->assertJsonPath('data.total', $total);
+        }
+
+        // Vehicles: a crew name finds the unit it is assigned to; plate still works.
+        $this->actingAs($admin)->getJson('/api/v1/admin/vehicles?search='.urlencode('mark arone'))
+            ->assertOk()->assertJsonPath('data.total', 1)->assertJsonPath('data.data.0.unit_number', 'UNIT-MARK');
+        $this->actingAs($admin)->getJson('/api/v1/admin/vehicles?search=SRC-002')
+            ->assertOk()->assertJsonPath('data.total', 1);
+    }
+
     public function test_vehicle_endpoint_returns_single_vehicle_details(): void
     {
         $admin = $this->makeAdmin();

@@ -40,6 +40,17 @@ export interface RawRegistration {
   }>;
   blocked_until?: string | null;
   created_at: string;
+  /** School details a Student gave at sign-up; pending list only, null otherwise. */
+  student_details?: RegistrationStudentDetails | null;
+}
+
+/** Same field names and values as a discount application's school details. */
+export interface RegistrationStudentDetails {
+  school_name: string;
+  education_level: "HIGH_SCHOOL" | "COLLEGE";
+  grade_level: number | null;
+  school_year: string;
+  enrollment_term: string | null;
 }
 
 /** Frontend view-model for the pending registrations table + review modal. */
@@ -71,6 +82,8 @@ export interface PendingRegistration {
   }>;
   blockedUntil: string | null;
   createdAt: string;
+  /** School details from a Student sign-up; null for other types and older sign-ups. */
+  studentDetails: RegistrationStudentDetails | null;
 }
 
 export interface RegistrationListFilters {
@@ -163,6 +176,7 @@ function mapToViewModel(r: RawRegistration): PendingRegistration {
     gender: r.gender,
     username: r.username,
     appliedType: r.applied_type,
+    studentDetails: r.student_details ?? null,
     rejectionCount: r.rejection_count ?? 0,
     rejectionHistory: (r.rejection_history ?? []).map(item => ({
       reason: item.reason,

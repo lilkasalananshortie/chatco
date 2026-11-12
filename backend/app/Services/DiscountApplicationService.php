@@ -243,12 +243,22 @@ class DiscountApplicationService
         return DiscountApplication::select($withDocument ? [...$columns, 'document_path'] : $columns)
             ->with(['commuter:id,first_name,middle_name,surname,birthdate,gender,contact_number,username,commuter_type', 'commuter.user:id,email'])
             ->whereHas('commuter.user')
+            // A sign-up's school details are reviewed with the pending
+            // registration, not here, so nothing is reviewed twice.
+            ->whereRelation('commuter', 'account_status', '!=', 'PENDING')
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
             ->when($filters['request_type'] ?? null, fn ($q, $kind) => $q->where('request_type', $kind))
             ->when($filters['requested_type'] ?? null, fn ($q, $type) => $q->where('requested_type', $type))
             ->when($filters['id'] ?? null, fn ($q, $id) => $q->whereKey($id))
             ->when($filters['search'] ?? null, function ($q, $search) {
-                $q->whereHas('commuter', fn ($profile) => $profile->where(fn ($p) => $p->where('first_name', 'like', "%{$search}%")->orWhere('surname', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%")));
+                // A full name spans separate columns, so every word must match one of
+                // them ("juan dela" → first_name AND surname), in any order.
+                foreach (preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
+                    $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $word).'%';
+                    $q->whereHas('commuter', fn ($profile) => $profile->where(fn ($p) => $p->where('first_name', 'like', $term)
+                        ->orWhere('middle_name', 'like', $term)->orWhere('surname', 'like', $term)
+                        ->orWhere('suffix', 'like', $term)->orWhere('email', 'like', $term)));
+                }
             })
             ->orderBy('submitted_at')->orderBy('id')->paginate($filters['per_page'] ?? 10)
             ->through(fn ($application) => $this->present($application, true, $withDocument));
@@ -262,6 +272,8 @@ class DiscountApplicationService
             $profile = CommuterProfile::whereKey($candidate->commuter_id)->lockForUpdate()->firstOrFail();
             $application = DiscountApplication::whereKey($id)->lockForUpdate()->firstOrFail();
             abort_unless($application->status === 'PENDING', 409, 'This application has already been processed.');
+            // A sign-up's school details are decided with the registration itself.
+            abort_if($profile->account_status === 'PENDING', 409, 'Review this student with their pending registration.');
             abort_unless($application->revision === (int) $data['revision'], 409, 'The supporting document has changed. Reopen the application before reviewing it.');
             $isRenewal = $application->request_type === 'RENEWAL';
             $decision = $data['decision'];

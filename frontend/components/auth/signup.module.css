@@ -34,6 +34,13 @@
 .personalGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px 16px; }
 .personalGrid > div, .stepFields > div { min-width: 0; }
 .personalGrid > div:last-child { grid-column: 1 / -1; }
+/* Student school details, under the personal grid once Student is chosen. */
+.schoolDetails { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--signup-line); }
+.schoolHeading { margin: 0 0 4px; color: #e6edf5; font-size: 13px; font-weight: 600; }
+.schoolNote { margin: 0 0 16px; color: #8093aa; font-size: 12px; line-height: 1.6; }
+.schoolGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px 16px; }
+.schoolGrid > div { min-width: 0; }
+.schoolGrid > .wide { grid-column: 1 / -1; }
 .label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; margin-bottom: 7px; color: #c6d2e0; font-size: 12px; font-weight: 500; line-height: 1.5; }
 .optional { color: #8093aa; font-size: 10px; font-weight: 400; }
 .input {
@@ -182,7 +189,7 @@
   .title { font-size: 21px; }
   .subtitle { font-size: 12px; }
   .stepHeading { padding: 0 20px 20px; }
-  .personalGrid { gap: 16px 12px; }
+  .personalGrid, .schoolGrid { gap: 16px 12px; }
   .personalGrid > div:nth-child(5), .personalGrid > div:nth-child(6) { grid-column: 1 / -1; }
   .input { padding-inline: 11px; }
   .navigation { margin-top: 20px; padding: 16px 20px 0; gap: 8px; }
@@ -196,6 +203,6 @@
   .form [role="group"] input { height: 48px; font-size: 20px; }
 }
 @media (max-width: 359px) {
-  .personalGrid { grid-template-columns: minmax(0, 1fr); }
+  .personalGrid, .schoolGrid { grid-template-columns: minmax(0, 1fr); }
   .passwordRules { grid-template-columns: minmax(0, 1fr); }
 }

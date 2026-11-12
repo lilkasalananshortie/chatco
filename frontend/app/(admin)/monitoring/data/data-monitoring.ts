@@ -60,6 +60,8 @@ export function useMonitoringData(
   overspeedPage = 1,
   overspeedDate = "",
   historySort: SafetyHistorySort = "recent",
+  // The dashboard map preview needs only demand zones, not the history feed.
+  withOverspeed = true,
 ) {
   const [overspeedHistory, setOverspeedHistory] = useState<OverspeedLog[]>([]);
   const [overspeedTotal, setOverspeedTotal] = useState(0);
@@ -144,9 +146,10 @@ export function useMonitoringData(
   const fetchOverspeedRef = useRef(fetchOverspeed);
   useEffect(() => {
     fetchOverspeedRef.current = fetchOverspeed;
+    if (!withOverspeed) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchOverspeed only sets state after its await (async response), never synchronously.
     void fetchOverspeed();
-  }, [fetchOverspeed]);
+  }, [fetchOverspeed, withOverspeed]);
 
   // Initial fetch + polling. Coalesce focus/online/visibility events and let
   // slow refreshes finish before issuing the next batch.
@@ -162,7 +165,7 @@ export function useMonitoringData(
       lastRefreshAt = Date.now();
       void Promise.all([
         fetchDemandZones(),
-        ...(includeOverspeed ? [fetchOverspeedRef.current()] : []),
+        ...(includeOverspeed && withOverspeed ? [fetchOverspeedRef.current()] : []),
       ]).finally(() => { inFlight = false; });
     };
 
@@ -179,7 +182,7 @@ export function useMonitoringData(
       window.removeEventListener("online", onRefresh);
       document.removeEventListener("visibilitychange", onRefresh);
     };
-  }, [fetchDemandZones]);
+  }, [fetchDemandZones, withOverspeed]);
 
   const data: MonitoringData = {
     overspeedHistory,

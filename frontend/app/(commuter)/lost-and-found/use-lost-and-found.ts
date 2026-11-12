@@ -93,18 +93,13 @@ export function useLostAndFound() {
   const [watchlist, setWatchlist] = useState<Set<string>>(new Set());
   const [claims, setClaims] = useState<Map<string, ClaimData>>(new Map());
   const [claimPageData, setClaimPageData] = useState({ totalPages: 1, totalItems: 0, currentPage: 1 });
+  // Bumped after a claim or cancel to refetch the open tab, so its cards and
+  // claims come back from the DB instead of being patched locally.
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [apiData, setApiData] = useState<PaginatedAPIResponse>({ items: [], totalPages: 1, totalItems: 0, currentPage: 1 });
   const [isLoading, setIsLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
-
-  /** Backend claim status → the UI's ClaimStatus union. */
-  const toUiClaimStatus = (backend: string): Exclude<ClaimStatus, "NONE"> => {
-    if (backend === "APPROVED") return "VALIDATED";
-    if (backend === "REJECTED") return "REJECTED";
-    if (backend === "RELEASED") return "RELEASED";
-    return "PENDING";
-  };
 
   const toBackendClaimStatus = (filter: ClaimFilter): BackendClaimStatus | undefined => {
     if (filter === "PENDING") return "PENDING";
@@ -215,12 +210,16 @@ export function useLostAndFound() {
         range: toBackendRange(range),
         signal,
       });
+      const items = result.items.map(mapServiceItemToViewModel);
       setApiData({
-        items: result.items.map(mapServiceItemToViewModel),
+        items,
         totalPages: result.lastPage,
         totalItems: result.total,
         currentPage: result.page,
       });
+      // The page itself says which items this commuter has claimed, so the
+      // card buttons are right after a refresh, not only after claiming.
+      setClaims(claimsFromItems(items));
       setIsLoading(false);
     } catch (err) {
       if (err instanceof RequestCancelledError) return;
@@ -244,12 +243,14 @@ export function useLostAndFound() {
         categories: cats,
         signal,
       });
+      const items = result.items.map(mapServiceItemToViewModel);
       setApiData({
-        items: result.items.map(mapServiceItemToViewModel),
+        items,
         totalPages: result.lastPage,
         totalItems: result.total,
         currentPage: result.page,
       });
+      setClaims(claimsFromItems(items));
       // This page came straight from the watchlist endpoint, so every item
       // on it is watched by definition — keep the heart id-set in sync.
       // Only an unfiltered single page is the whole watchlist; a filtered
@@ -291,7 +292,7 @@ export function useLostAndFound() {
       void fetchLostItems(currentPage, ITEMS_PER_PAGE, activeCategories, debouncedSearchQuery, dateWindow, timeRange, controller.signal);
     }
     return () => controller.abort();
-  }, [activeTab, fetchLostItems, fetchWatchlistItems, loadClaims, currentPage, activeCategories, claimFilter, debouncedSearchQuery, dateWindow, timeRange]);
+  }, [activeTab, fetchLostItems, fetchWatchlistItems, loadClaims, currentPage, activeCategories, claimFilter, debouncedSearchQuery, dateWindow, timeRange, reloadKey]);
 
   const handleTabChange = (tab: ViewTab) => { setActiveTab(tab); setActiveCategories([]); setSearchQuery(""); setDateWindow({ from: "", to: "" }); setTimeRange("ALL"); setCurrentPage(1); };
   /**
@@ -395,14 +396,16 @@ export function useLostAndFound() {
     setClaimError(null);
     try {
       await claimItem(itemToClaim.id, { proof: proofText.trim(), images: proofImages });
-      await loadClaims(1, "ALL");
+      setReloadKey((key) => key + 1);
       setShowClaimModal(false);
       return true;
     } catch (err) {
       if (err instanceof LostFoundOperationError) {
-        // 409 → "Item already claimed" (the backend rejects claims on
-        // APPROVED/RELEASED/CLOSED items). 422 → proof validation.
+        // 409 → "Item already claimed". 422 → a claim rule with its own
+        // message (proof validation, "You already have a claim on this item.").
         setClaimError(err.code === "conflict" ? "Item already claimed" : err.message);
+        // The item may have changed under this card (e.g. claimed in another tab).
+        setReloadKey((key) => key + 1);
       } else {
         setClaimError(err instanceof Error ? err.message : "Unable to submit claim.");
       }
@@ -451,7 +454,7 @@ export function useLostAndFound() {
     } catch {
       // Fall through — the reload below resyncs to the DB's truth.
     }
-    await loadClaims(currentPage, claimFilter);
+    setReloadKey((key) => key + 1);
     setIsCancellingClaim(false);
     setClaimToCancel(null);
     setCancelToast("Claim cancelled successfully.");
@@ -510,5 +513,43 @@ function mapServiceItemToViewModel(item: LostFoundItem): LostItem {
     datePosted: item.datePosted,
     photos: item.photos,
     claimableUntil: item.claimableUntil,
+    myClaim: item.myClaim,
   };
+}
+
+/** Backend claim status → the UI's ClaimStatus union. */
+function toUiClaimStatus(backend: string): Exclude<ClaimStatus, "NONE"> {
+  if (backend === "APPROVED") return "VALIDATED";
+  if (backend === "REJECTED") return "REJECTED";
+  if (backend === "RELEASED") return "RELEASED";
+  return "PENDING";
+}
+
+/**
+ * Card claim state for a browse/watchlist page, from each item's `myClaim`.
+ * Only the id and status are known here; the detail fields stay empty until
+ * the My Claims tab loads the full claim.
+ */
+function claimsFromItems(items: LostItem[]): Map<string, ClaimData> {
+  const next = new Map<string, ClaimData>();
+  for (const item of items) {
+    if (!item.myClaim) continue;
+    next.set(item.id, {
+      claimId: item.myClaim.id,
+      status: toUiClaimStatus(item.myClaim.status),
+      proof: "",
+      claimDate: "",
+      reviewedAt: null,
+      approvedAt: null,
+      rejectedAt: null,
+      releasedAt: null,
+      rejectionReason: null,
+      pickupLocation: null,
+      pickupAt: null,
+      pickupReminder: null,
+      noShowAt: null,
+      item,
+    });
+  }
+  return next;
 }

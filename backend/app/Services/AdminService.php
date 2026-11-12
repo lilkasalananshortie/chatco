@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\UserRole;
 use App\Mail\AccountApprovedMail;
 use App\Mail\AccountRejectedMail;
+use App\Models\DiscountApplication;
 use App\Models\Driver;
 use App\Models\RegistrationRejection;
 use App\Models\Remittance;
@@ -42,7 +43,7 @@ class AdminService
      * Supported filters:
      *   - status   (exact match, e.g. ACTIVE / MAINTENANCE / INACTIVE)
      *   - route_id (exact match, UUID)
-     *   - search   (LIKE on plate_number OR unit_number)
+     *   - search   (each word LIKE plate_number, unit_number, or driver/conductor name)
      *
      * Always eager-loads driver + route (+ conductor) to avoid N+1 in lists.
      *
@@ -91,11 +92,20 @@ class AdminService
                 $q->where('route_id', $routeId);
             })
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
-                $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], trim($search)).'%';
-                $q->where(function (Builder $sub) use ($term) {
-                    $sub->where('plate_number', 'like', $term)
-                        ->orWhere('unit_number', 'like', $term);
-                });
+                // Every word must match the unit, plate, or a crew name, so a
+                // full name ("mark arone") finds the unit it is assigned to.
+                foreach ($this->searchWords($search) as $word) {
+                    $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $word).'%';
+                    $crewName = fn (Builder $person) => $person->where('first_name', 'like', $term)
+                        ->orWhere('middle_name', 'like', $term)
+                        ->orWhere('last_name', 'like', $term);
+                    $q->where(function (Builder $sub) use ($term, $crewName) {
+                        $sub->where('plate_number', 'like', $term)
+                            ->orWhere('unit_number', 'like', $term)
+                            ->orWhereHas('driver', $crewName)
+                            ->orWhereHas('conductor', $crewName);
+                    });
+                }
             });
     }
 
@@ -962,19 +972,20 @@ class AdminService
             ->whereNull('deleted_at');
 
         if ($search !== null && trim($search) !== '') {
-            $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], trim($search)).'%';
-            $drivers->where(function ($query) use ($term): void {
-                $query->where('first_name', 'like', $term)
-                    ->orWhere('last_name', 'like', $term)
-                    ->orWhere('contact', 'like', $term)
-                    ->orWhereRaw("'Driver' like ?", [$term]);
-            });
-            $conductors->where(function ($query) use ($term): void {
-                $query->where('first_name', 'like', $term)
-                    ->orWhere('last_name', 'like', $term)
-                    ->orWhere('contact', 'like', $term)
-                    ->orWhereRaw("'Conductor' like ?", [$term]);
-            });
+            // Names span separate columns, so each word must match one of them
+            // ("mark a" → "Mark" in first_name AND "A" in last_name).
+            foreach ($this->searchWords($search) as $word) {
+                $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $word).'%';
+                foreach ([[$drivers, 'Driver'], [$conductors, 'Conductor']] as [$table, $roleLabel]) {
+                    $table->where(function ($query) use ($term, $roleLabel): void {
+                        $query->where('first_name', 'like', $term)
+                            ->orWhere('middle_name', 'like', $term)
+                            ->orWhere('last_name', 'like', $term)
+                            ->orWhere('contact', 'like', $term)
+                            ->orWhereRaw('? like ?', [$roleLabel, $term]);
+                    });
+                }
+            }
         }
 
         $personnel = $drivers->unionAll($conductors);
@@ -1635,7 +1646,15 @@ class AdminService
             ->when($filters['search'] ?? null, function (Builder $query, string $search) {
                 $this->applySearch($query, trim($search));
             })
-            ->with(['commuterProfile:id,first_name,middle_name,surname,birthdate,gender,email,contact_number,commuter_type,applied_type,account_status,id_image_url,profile_image_url,verified_at,rejection_reason,username,language_preference'])
+            ->with([
+                'commuterProfile:id,first_name,middle_name,surname,birthdate,gender,email,contact_number,commuter_type,applied_type,account_status,id_image_url,profile_image_url,verified_at,rejection_reason,username,language_preference',
+                // School details a Student filed at sign-up, reviewed here with the ID.
+                'commuterProfile.discountApplications' => fn ($query) => $query
+                    ->where('request_type', 'APPLICATION')
+                    ->where('requested_type', 'STUDENT')
+                    ->where('status', 'PENDING')
+                    ->select(['id', 'commuter_id', 'school_name', 'education_level', 'grade_level', 'school_year', 'enrollment_term']),
+            ])
             ->orderBy('users.created_at', $direction)
             // created_at has second precision; the id tie-breaker keeps
             // same-second sign-ups in a fixed order so paging never repeats
@@ -1659,8 +1678,11 @@ class AdminService
             $c = $user->commuterProfile;
             $rows = $historyByUser[$user->id] ?? collect();
             $history = $this->registrationHistoryPayloadFromRows($rows);
+            $school = $c?->discountApplications->first();
 
             return [
+                // Null for non-students and for sign-ups made before school details were asked.
+                'student_details' => $school?->only(['school_name', 'education_level', 'grade_level', 'school_year', 'enrollment_term']),
                 'id' => $user->id,
                 'email' => $user->email,
                 'first_name' => $c?->first_name,
@@ -1963,13 +1985,16 @@ class AdminService
             ]);
         }
 
-        $profile->update([
-            'commuter_type' => $profile->applied_type ?? 'REGULAR',
-            'student_discount_expires_at' => $profile->applied_type === 'STUDENT' ? \App\Models\CommuterProfile::initialStudentExpiry() : null,
-            'account_status' => 'APPROVED',
-            'verified_at' => now(),
-            'rejection_reason' => null,
-        ]);
+        DB::transaction(function () use ($profile): void {
+            $profile->update([
+                'commuter_type' => $profile->applied_type ?? 'REGULAR',
+                'student_discount_expires_at' => $profile->applied_type === 'STUDENT' ? \App\Models\CommuterProfile::initialStudentExpiry() : null,
+                'account_status' => 'APPROVED',
+                'verified_at' => now(),
+                'rejection_reason' => null,
+            ]);
+            $this->decideSignupStudentApplication($profile->id, 'APPROVED');
+        });
 
         $fresh = $profile->fresh();
 
@@ -2058,6 +2083,7 @@ class AdminService
             'rejection_reason' => $reason,
             'username' => $placeholderUsername,
         ]);
+        $this->decideSignupStudentApplication($profile->id, 'REJECTED', $reason);
 
         // Soft-delete the user (cascades to commuter_profile via shared PK).
         $user->delete();
@@ -2070,6 +2096,26 @@ class AdminService
             'attempt_number' => $strike->attempt_number,
             'blocked_until' => $strike->blocked_until?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Decide the Student application a self-signup files with its school
+     * details (AuthService::register). It is reviewed together with the
+     * registration, so it follows the registration's outcome. No-op for
+     * other types and for sign-ups made before school details were asked.
+     */
+    private function decideSignupStudentApplication(string $commuterId, string $status, ?string $reason = null): void
+    {
+        DiscountApplication::where('commuter_id', $commuterId)
+            ->where('request_type', 'APPLICATION')
+            ->where('requested_type', 'STUDENT')
+            ->where('status', 'PENDING')
+            ->update([
+                'status' => $status,
+                'reason' => $reason,
+                'reviewed_at' => now(),
+                'reviewed_by' => auth()->id(),
+            ]);
     }
 
     // ── Email helpers ──────────────────────────────────────────────

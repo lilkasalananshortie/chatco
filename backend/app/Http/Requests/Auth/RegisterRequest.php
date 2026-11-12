@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\DiscountApplication;
 use App\Models\Setting;
 use App\Rules\PhilippineMobileNumber;
 use App\Rules\StrongPassword;
@@ -74,6 +75,12 @@ class RegisterRequest extends FormRequest
         if (is_string($this->middle_name) && trim($this->middle_name) !== '') {
             $this->merge(['middle_name' => Str::title(trim($this->middle_name))]);
         }
+
+        foreach (DiscountApplication::STUDENT_TEXT_FIELDS as $field) {
+            if (is_string($this->input($field))) {
+                $this->merge([$field => trim($this->input($field))]);
+            }
+        }
     }
 
     public function rules(): array
@@ -104,6 +111,9 @@ class RegisterRequest extends FormRequest
                 Rule::requiredIf(fn () => $this->input('applied_type') !== 'REGULAR' || Setting::requiresIdUpload()),
                 'nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120',
             ],
+            // A Student gives the same school details renewal and the admin's
+            // onsite registration ask for; reviewed with the registration.
+            ...DiscountApplication::studentDetailRules($this->input('applied_type') === 'STUDENT'),
         ];
     }
 

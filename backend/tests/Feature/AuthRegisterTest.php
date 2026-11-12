@@ -55,6 +55,11 @@ class AuthRegisterTest extends TestCase
             'password_confirmation' => 'SecurePass123!',
             'language_preference' => 'English',
             'applied_type' => 'STUDENT',
+            // Students give their school details (ignored for other types).
+            'school_name' => 'Bulacan State University',
+            'education_level' => 'COLLEGE',
+            'school_year' => '2026-2027',
+            'enrollment_term' => '1st Semester',
             'terms_accepted' => true,
             'privacy_acknowledged' => true,
             'registration_confirmed' => true,
@@ -197,6 +202,38 @@ class AuthRegisterTest extends TestCase
                 $this->assertDatabaseCount('users', 0);
             }
         }
+    }
+
+    public function test_student_signup_saves_school_details_as_a_pending_application(): void
+    {
+        $this->registerWithFile()->assertStatus(201);
+
+        $profileId = User::where('email', 'maria.santos@example.com')->value('id');
+        $this->assertDatabaseHas('discount_applications', [
+            'commuter_id' => $profileId,
+            'request_type' => 'APPLICATION',
+            'requested_type' => 'STUDENT',
+            'status' => 'PENDING',
+            'school_name' => 'Bulacan State University',
+            'education_level' => 'COLLEGE',
+            'grade_level' => null,
+            'school_year' => '2026-2027',
+            'enrollment_term' => '1st Semester',
+        ]);
+    }
+
+    public function test_student_signup_requires_school_details_and_other_types_do_not(): void
+    {
+        $this->registerWithFile(['school_name' => '', 'education_level' => 'HIGH_SCHOOL', 'enrollment_term' => ''])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['school_name', 'grade_level']);
+        $this->assertSame(0, User::count());
+
+        $this->registerWithFile([
+            'applied_type' => 'PWD',
+            'school_name' => null, 'education_level' => null, 'school_year' => null, 'enrollment_term' => null,
+        ])->assertStatus(201);
+        $this->assertDatabaseCount('discount_applications', 0);
     }
 
     public function test_register_hashes_the_password(): void

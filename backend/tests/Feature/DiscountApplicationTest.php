@@ -378,6 +378,11 @@ class DiscountApplicationTest extends TestCase
         Sanctum::actingAs($this->admin);
         $this->getJson('/api/v1/admin/discount-applications?request_type=APPLICATION&requested_type=SENIOR&search=commuter022@gmail.com')
             ->assertOk()->assertJsonPath('data.total', 1)->assertJsonMissingPath('data.data.0.document_url')->assertJsonMissingPath('data.data.0.document_path');
+        // Full-name search: each word may hit a different name column, in any order.
+        CommuterProfile::whereKey($this->commuter->id)->update(['first_name' => 'Juan', 'surname' => 'Dela Cruz']);
+        foreach (['juan dela' => 1, 'cruz juan' => 1, 'Juan Dela Cruz' => 1, 'juan zzz' => 0] as $search => $total) {
+            $this->getJson('/api/v1/admin/discount-applications?search='.urlencode($search))->assertOk()->assertJsonPath('data.total', $total);
+        }
         $this->getJson('/api/v1/admin/discount-applications?request_type=RENEWAL')->assertOk()->assertJsonPath('data.total', 0);
         $this->getJson('/api/v1/admin/discount-applications?requested_type=PWD')->assertOk()->assertJsonPath('data.total', 0);
         $this->getJson('/api/v1/admin/discount-applications?id='.$application->id)->assertOk()->assertJsonStructure(['data' => ['data' => [['document_url']]]]);

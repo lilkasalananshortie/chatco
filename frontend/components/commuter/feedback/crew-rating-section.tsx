@@ -113,7 +113,7 @@ export function CrewRatingSection({
       {rating > 0 && (
         <div className="animate-fade-in">
           <h3 className="text-white/70 text-sm font-semibold light:text-gray-700 mb-3">
-            {isPositive ? "What went well?" : "What could be improved?"}
+            {isPositive ? "What went well?" : "What went wrong?"}
             <span className="text-white/30 font-normal light:text-gray-400 ml-1.5">(pick at least one)</span>
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -125,12 +125,12 @@ export function CrewRatingSection({
                   type="button"
                   aria-pressed={isSelected}
                   onClick={() => onToggleTag(tag)}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] ${
+                  // Solid neutral tags; CHATCO Blue marks a picked one, the
+                  // same for praise or complaints (no green/red coding).
+                  className={`min-h-10 px-4 rounded-md text-xs border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#62A0EA] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050F1A] light:focus-visible:ring-offset-white ${
                     isSelected
-                      ? isPositive
-                        ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg shadow-emerald-500/10 light:text-emerald-700"
-                        : "bg-red-500/20 border-red-500/50 text-red-400 shadow-lg shadow-red-500/10 light:text-red-700"
-                      : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70 light:bg-white light:border-gray-200 light:text-gray-600 light:hover:bg-gray-100 light:hover:text-gray-900"
+                      ? "bg-[#1A5FB4] border-[#1A5FB4] text-white font-semibold"
+                      : "bg-[#0B223A] border-[#1E3A56] text-white/80 font-medium hover:border-white/30 hover:text-white light:bg-white light:border-gray-200 light:text-gray-700 light:hover:bg-gray-50 light:hover:text-gray-900"
                   }`}
                 >
                   {tag}
