@@ -238,7 +238,7 @@ export const defaultFinancialRules: FinancialRulesConfig = {
   succeedingFare: '2.40',
   baseBarangayCount: '4',
   // Keep in sync with config/registration.php student_renewal_month.
-  studentRenewalMonth: '9',
+  studentRenewalMonth: '11',
 };
 
 export const defaultOperationsRules: OperationsRulesConfig = {

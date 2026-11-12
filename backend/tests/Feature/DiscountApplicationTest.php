@@ -31,6 +31,8 @@ class DiscountApplicationTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2027-03-15 12:00:00', 'Asia/Manila'));
+        Setting::where('key', Setting::STUDENT_RENEWAL_MONTH_KEY)->delete();
+        \Illuminate\Support\Facades\Cache::forget(Setting::STUDENT_RENEWAL_MONTH_CACHE_KEY);
         config(['registration.student_renewal_first_year' => 2027, 'registration.student_renewal_month' => 9]);
         Storage::fake('r2_private');
         $this->seed(Commuter022Seeder::class);

@@ -89,7 +89,7 @@ class Setting extends Model
         $saved = Cache::remember(self::STUDENT_RENEWAL_MONTH_CACHE_KEY, now()->addMinutes(5),
             fn (): int => (int) static::where('key', self::STUDENT_RENEWAL_MONTH_KEY)->value('value'));
 
-        return $saved >= 1 && $saved <= 12 ? $saved : (int) config('registration.student_renewal_month', 9);
+        return $saved >= 1 && $saved <= 12 ? $saved : (int) config('registration.student_renewal_month', 11);
     }
 
     /** Settings > Voucher Generator > "Receipt QR free-ride promo". */

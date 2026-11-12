@@ -28,7 +28,10 @@ class StudentRenewalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['registration.student_renewal_first_year' => 2027]);
+        // Most scenarios exercise the original September cycle explicitly.
+        Setting::where('key', Setting::STUDENT_RENEWAL_MONTH_KEY)->delete();
+        \Illuminate\Support\Facades\Cache::forget(Setting::STUDENT_RENEWAL_MONTH_CACHE_KEY);
+        config(['registration.student_renewal_first_year' => 2027, 'registration.student_renewal_month' => 9]);
         Storage::fake('public');
         Storage::fake('r2_private');
         $this->at('2027-09-15 12:00:00');
@@ -90,6 +93,23 @@ class StudentRenewalTest extends TestCase
         Sanctum::actingAs($admin);
 
         return $this->postJson('/api/v1/admin/discount-applications/'.$application->id.'/review', compact('decision', 'reason') + ['revision' => $application->revision]);
+    }
+
+    public function test_deploy_opens_november_2026_renewal_for_existing_students(): void
+    {
+        $student = $this->commuter();
+        $this->at('2026-11-13 12:00:00');
+        config(['registration.student_renewal_first_year' => 2026]);
+
+        $migration = require database_path('migrations/2026_11_13_000001_open_november_student_renewal.php');
+        $migration->up();
+
+        $this->assertSame(11, Setting::studentRenewalMonth());
+        $this->assertSame('2026-12-01', $student->fresh()->commuterProfile->student_discount_expires_at->toDateString());
+        $state = app(StudentRenewalService::class)->state($student->fresh());
+        $this->assertSame('November 1-30, 2026', $state['renewal_period']);
+        $this->assertTrue($state['can_submit']);
+        $this->assertTrue($state['discount_eligible']);
     }
 
     public function test_september_grace_and_student_only_expiration(): void
