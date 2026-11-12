@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+import { getFareConfig } from '@/lib/shared/fare/fare-matrix.service';
 import { APPLICATION_LABELS, DISCOUNT_CATEGORIES, getApplicationState, type ApplicationState } from '@/lib/shared/services/student-renewal.service';
 import { toCommuterType } from '@/types';
 
@@ -31,7 +33,7 @@ export function DiscountApplicationEntry({ commuterType, onClassificationChanged
   // soon as the server reports the new classification.
   if ((state?.commuter_type ?? commuterType) !== 'REGULAR') return null;
   // An unknown status must not be presented as an account that hasn't applied.
-  if (!state && !failed) return <div role="status" className="mt-3 border-t border-white/10 pt-3 light:border-gray-200 text-sm text-white/60 light:text-gray-500">
+  if (!state && !failed) return <div role="status" className="mt-4 border-t border-white/15 pt-4 text-sm text-white/60 light:border-[#1A5FB4]/15 light:text-gray-500">
     Loading discount application status...
   </div>;
   const application = state?.application;
@@ -45,13 +47,20 @@ export function DiscountApplicationEntry({ commuterType, onClassificationChanged
     : status === 'PENDING' ? { text: 'Your discount application is currently under review. Check here for updates on your application status.', link: 'View application status' }
     : status === 'NEEDS_CORRECTION' ? { text: `An admin asked for a correction to your ${category} discount application. Send corrected documents to continue the review.`, link: 'Update your application' }
     : status === 'REJECTED' ? { text: `Your ${category} discount application was not approved.`, link: 'Apply again' }
-    : { text: 'Eligible for a Student, PWD, or Senior Citizen discount? Submit your supporting document for verification.', link: 'Apply for a discount' };
-  return <div className="mt-3 border-t border-white/10 pt-3 light:border-gray-200 text-sm">
-    <p className={status === 'REJECTED' ? 'text-red-200 light:text-red-700' : status === 'NEEDS_CORRECTION' ? 'text-amber-200 light:text-amber-700' : 'text-white/60 light:text-gray-600'}>{content.text}</p>
-    {(status === 'REJECTED' || status === 'NEEDS_CORRECTION') && application?.reason && <p className="mt-1 wrap-break-word text-white/60 light:text-gray-600"><span className="text-white/45 light:text-gray-400">Reason: </span>{application.reason}</p>}
+    // Cached live rate when the fare matrix has loaded this session; otherwise the same 20% default the type badge uses.
+    : { lead: 'Student, PWD or Senior Citizen?', text: `Verify your ID to pay ${getFareConfig().discountRate}% less on every ride.`, link: 'Apply for a discount' };
+  // Waiting on an admin (or no status to act on) is a look, not a next step.
+  const primary = !!state && status !== 'PENDING';
+  return <div className="mt-4 border-t border-white/15 pt-4 text-sm light:border-[#1A5FB4]/15">
+    <p className={`leading-relaxed ${status === 'REJECTED' ? 'text-red-200 light:text-red-700' : 'text-white/85 light:text-gray-700'}`}>
+      {'lead' in content && <span className="font-semibold text-white light:text-gray-900">{content.lead} </span>}
+      {content.text}
+    </p>
+    {(status === 'REJECTED' || status === 'NEEDS_CORRECTION') && application?.reason && <p className="mt-1 wrap-break-word text-white/70 light:text-gray-600"><span className="text-white/50 light:text-gray-500">Reason: </span>{application.reason}</p>}
     {failed && <p className="mt-1 text-xs text-white/50 light:text-gray-500">Open your application to check its latest status.</p>}
-    <Link href={renewal ? '/student-renewal' : '/discount-application'} onClick={() => window.dispatchEvent(new Event('commuter:close-popovers'))} className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-[#99C1F1] hover:text-white light:text-[#1A5FB4] light:hover:text-[#164A8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#99C1F1]">
+    <Link href={renewal ? '/student-renewal' : '/discount-application'} onClick={() => window.dispatchEvent(new Event('commuter:close-popovers'))} className={`mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#99C1F1] sm:w-auto sm:inline-flex ${primary ? 'bg-[#1A5FB4] text-white hover:bg-[#164A8F]' : 'border border-[#2A4A70] bg-[#13283F] text-white hover:bg-[#1A3350] light:border-gray-200 light:bg-white light:text-gray-800 light:hover:bg-gray-50'}`}>
       {content.link}
+      {primary && <ArrowRight size={16} aria-hidden="true" />}
     </Link>
   </div>;
 }

@@ -223,9 +223,10 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
       <div className={isPage ? "min-h-0 flex-1 overflow-y-auto pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8" : undefined}>
       <div className={isPage ? "max-w-2xl mx-auto px-4 pb-6 sm:px-6 lg:p-8 space-y-5 lg:space-y-6" : "space-y-4 p-6"}>
         {/* Header & Avatar */}
-        <div className={isPage ? "max-lg:relative max-lg:isolate max-lg:overflow-hidden flex items-center gap-4 rounded-2xl border border-[#62A0EA]/20 bg-gradient-to-br from-[#102E50] to-[#071A2E] light:border-[#1A5FB4]/20 light:from-[#F0F7FF] light:to-white p-5 lg:gap-5 lg:rounded-none lg:border-0 lg:bg-none lg:p-0" : "relative isolate flex items-center gap-5 overflow-hidden rounded-2xl border border-[#62A0EA]/25 bg-gradient-to-br from-[#153C66] via-[#0C2743] to-[#071A2E] p-6 shadow-lg shadow-black/10 light:border-[#1A5FB4]/20 light:from-[#F0F7FF] light:via-[#F7FAFF] light:to-white light:shadow-black/5"}>
+        <div className={isPage ? "max-lg:relative max-lg:isolate max-lg:overflow-hidden rounded-2xl border border-[#62A0EA]/20 bg-gradient-to-br from-[#102E50] to-[#071A2E] light:border-[#1A5FB4]/20 light:from-[#F0F7FF] light:to-white p-5 lg:rounded-none lg:border-0 lg:bg-none lg:p-0" : "relative isolate overflow-hidden rounded-2xl border border-[#62A0EA]/25 bg-gradient-to-br from-[#153C66] via-[#0C2743] to-[#071A2E] p-6 shadow-lg shadow-black/10 light:border-[#1A5FB4]/20 light:from-[#F0F7FF] light:via-[#F7FAFF] light:to-white light:shadow-black/5"}>
           {/* Page: rings only below lg, where the header is still a card. */}
           <div aria-hidden="true" className={`pointer-events-none absolute -right-10 -top-16 -z-10 h-56 w-56 rounded-full border border-[#99C1F1]/10 light:border-[#1A5FB4]/10 bg-[#62A0EA]/5 ${isPage ? "lg:hidden" : ""}`}><div className="absolute inset-6 rounded-full border border-[#99C1F1]/10 light:border-[#1A5FB4]/10" /><div className="absolute inset-12 rounded-full border border-[#99C1F1]/10 light:border-[#1A5FB4]/10" /></div>
+          <div className={isPage ? "flex items-center gap-4 lg:gap-5" : "flex items-center gap-5"}>
           <ProfilePhoto profile={profile} onUploaded={applyPhotoChange} helpId={photoHelpId} className="group relative flex h-20 w-20 items-center justify-center rounded-2xl border border-[#99C1F1]/30 bg-[#1A5FB4] text-2xl font-bold text-white shadow-lg ring-4 ring-white/5 transition-colors hover:border-[#99C1F1] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#99C1F1] sm:h-24 sm:w-24 sm:text-3xl" />
           <div className="min-w-0 flex-1">
             <h2 className={isPage ? "break-words text-xl font-bold leading-snug text-white light:text-gray-900 lg:text-2xl" : "break-words text-2xl font-bold leading-snug tracking-tight text-white light:text-gray-900"}>
@@ -248,12 +249,11 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
             </div>
           </div>
           {isPage && <div className="hidden self-start lg:block"><AccountMenu signOut={{ request: () => setShowLogoutConfirm(true), locked: false }} trigger="gear" /></div>}
-        </div>
-
-        <div className="space-y-2">
-          <p id={photoHelpId} className="text-xs text-white/45 light:text-gray-500">Profile photo: JPG, PNG, or WebP. Maximum 3 MB and 4096 × 4096 pixels. Choosing a photo uploads it to your account.</p>
+          </div>
           {['ACTIVE', 'APPROVED'].includes(profile.accountStatus) && <DiscountApplicationEntry commuterType={profile.commuterType} onClassificationChanged={retryLoad} />}
         </div>
+
+        <p id={photoHelpId} className="text-xs text-white/45 light:text-gray-500">Profile photo: JPG, PNG, or WebP. Maximum 3 MB and 4096 × 4096 pixels. Choosing a photo uploads it to your account.</p>
 
         {/* Transient success banner */}
         {successMessage && (

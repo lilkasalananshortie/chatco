@@ -143,6 +143,23 @@ class AdminUserManagementTest extends TestCase
         }
     }
 
+    public function test_list_filters_commuters_by_type(): void
+    {
+        [, $headers] = $this->asAdmin();
+        $this->makeConductor();
+        $this->makeCommuter('regular@gmail.com');
+        $student = $this->makeCommuter('student@gmail.com');
+        $student->commuterProfile->update(['commuter_type' => 'STUDENT']);
+
+        $response = $this->withHeaders($headers)->getJson('/api/v1/admin/users?role=COMMUTER&commuter_type=STUDENT');
+        $response->assertOk();
+        $this->assertSame([$student->id], array_column($response->json('data.data'), 'id'));
+
+        // An unknown type is ignored rather than emptying the list.
+        $this->withHeaders($headers)->getJson('/api/v1/admin/users?role=COMMUTER&commuter_type=BOGUS')
+            ->assertOk()->assertJsonPath('data.total', 2);
+    }
+
     public function test_list_searches_by_email_and_name(): void
     {
         [$admin, $headers] = $this->asAdmin();

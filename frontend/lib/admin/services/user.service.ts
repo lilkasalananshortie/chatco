@@ -157,6 +157,7 @@ export interface UserListFilters {
   page?: number;
   sort?: "recent" | "oldest" | "alphabetical";
   accountStatus?: "" | "ACTIVE" | "SUSPENDED";
+  commuterType?: CommuterType | "";
 }
 
 // ─── Update input ───────────────────────────────────────────────────
@@ -289,6 +290,7 @@ function buildQueryString(filters: UserListFilters): string {
   if (filters.page) params.set("page", String(filters.page));
   if (filters.sort) params.set("sort", filters.sort);
   if (filters.accountStatus) params.set("account_status", filters.accountStatus);
+  if (filters.commuterType) params.set("commuter_type", filters.commuterType);
   params.set("active_only", "1");
   const qs = params.toString();
   return qs ? `?${qs}` : "";

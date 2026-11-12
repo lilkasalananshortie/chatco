@@ -477,6 +477,20 @@ export default function UsersPage() {
               <option value="ADMIN" className="bg-gray-800 admin-light:bg-white">Admins</option>
             </select>
           )}
+          {activeTab === 'active' && filters.role === 'COMMUTER' && (
+            <select
+              value={filters.commuterType}
+              onChange={(e) => setFilters({ commuterType: e.target.value as typeof filters.commuterType })}
+              aria-label="Filter commuters by type"
+              className={selectFilterClasses}
+            >
+              <option value="" className="bg-gray-800 admin-light:bg-white">All Types</option>
+              <option value="REGULAR" className="bg-gray-800 admin-light:bg-white">Regular</option>
+              <option value="STUDENT" className="bg-gray-800 admin-light:bg-white">Student</option>
+              <option value="SENIOR" className="bg-gray-800 admin-light:bg-white">Senior Citizen</option>
+              <option value="PWD" className="bg-gray-800 admin-light:bg-white">PWD</option>
+            </select>
+          )}
           {activeTab === 'active' && (
             <>
               <select

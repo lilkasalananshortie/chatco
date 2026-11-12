@@ -39,6 +39,7 @@ class AdminUserController extends Controller
             'per_page' => $request->integer('per_page', 15),
             'sort' => $request->query('sort', 'recent'),
             'account_status' => $request->query('account_status'),
+            'commuter_type' => $request->query('commuter_type'),
             'active_only' => $request->boolean('active_only'),
             // The signed-in admin manages their own account from Settings, not here.
             'exclude_id' => $request->user()->id,

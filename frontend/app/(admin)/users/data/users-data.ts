@@ -101,6 +101,8 @@ export interface UsersTabFilters {
   page: number;
   sort: "recent" | "oldest" | "alphabetical";
   accountStatus: "" | "ACTIVE" | "SUSPENDED";
+  /** Only applies while role is COMMUTER; cleared when the role changes. */
+  commuterType: NonNullable<UserListFilters["commuterType"]>;
 }
 
 export interface UseUsersDataReturn {
@@ -229,6 +231,7 @@ export function useUsersData(activeTab: "active" | "pending" | "rejected" | "dis
     page: 1,
     sort: "recent",
     accountStatus: "",
+    commuterType: "",
   });
 
   /**
@@ -299,6 +302,7 @@ export function useUsersData(activeTab: "active" | "pending" | "rejected" | "dis
           page: f.page,
           sort: f.sort,
           accountStatus: f.accountStatus,
+          commuterType: f.role === "COMMUTER" ? f.commuterType : "",
         });
         if (sequence !== requestSequence.current) return;
         setActiveUsers(result.users.map(mapToActiveUser));
@@ -453,9 +457,11 @@ export function useUsersData(activeTab: "active" | "pending" | "rejected" | "dis
         const searchChanged = f.search !== undefined && f.search !== prev.search;
         const sortChanged = f.sort !== undefined && f.sort !== prev.sort;
         const statusChanged = f.accountStatus !== undefined && f.accountStatus !== prev.accountStatus;
+        const typeChanged = f.commuterType !== undefined && f.commuterType !== prev.commuterType;
         const pageSizeChanged = f.perPage !== undefined && f.perPage !== prev.perPage;
         const next = { ...prev, ...f };
-        if (roleChanged || searchChanged || sortChanged || statusChanged || pageSizeChanged) next.page = 1;
+        if (roleChanged && next.role !== "COMMUTER") next.commuterType = "";
+        if (roleChanged || searchChanged || sortChanged || statusChanged || typeChanged || pageSizeChanged) next.page = 1;
         return next;
       });
     },

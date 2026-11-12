@@ -1199,6 +1199,11 @@ class AdminService
             $this->applySearch($query, trim($filters['search']));
         }
 
+        // Current fare type, not the applied one; unknown values are ignored like other filters.
+        if (in_array($filters['commuter_type'] ?? null, ['REGULAR', 'STUDENT', 'SENIOR', 'PWD'], true)) {
+            $query->whereHas('commuterProfile', fn (Builder $profile) => $profile->where('commuter_type', $filters['commuter_type']));
+        }
+
         // SUSPENDED is the "blocked" filter: suspended accounts plus disabled
         // conductors (a conductor's only block mechanism).
         if (! empty($filters['account_status'])) {
