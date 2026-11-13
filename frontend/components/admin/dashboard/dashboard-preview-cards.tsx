@@ -19,8 +19,9 @@ function claimStatusLabel(status: string): string {
 
 function claimStatusTextClass(status: string): string {
   switch (status.toUpperCase()) {
-    case "PENDING": return "text-amber-300 admin-light:text-amber-700";
-    case "APPROVED": return "text-emerald-300 admin-light:text-emerald-700";
+    // Only a rejection is coloured; other claim states are plain text.
+    case "PENDING":
+    case "APPROVED": return "text-slate-200 admin-light:text-slate-800";
     case "REJECTED": return "text-red-300 admin-light:text-red-700";
     default: return "text-white/50 admin-light:text-slate-500";
   }
@@ -28,8 +29,8 @@ function claimStatusTextClass(status: string): string {
 
 function claimStatusDotClass(status: string): string {
   switch (status.toUpperCase()) {
-    case "PENDING": return "bg-amber-300 admin-light:bg-amber-500";
-    case "APPROVED": return "bg-emerald-300 admin-light:bg-emerald-500";
+    case "PENDING":
+    case "APPROVED": return "bg-white/60 admin-light:bg-slate-500";
     case "REJECTED": return "bg-red-300 admin-light:bg-red-500";
     default: return "bg-white/40 admin-light:bg-slate-400";
   }
@@ -103,7 +104,7 @@ export function DashboardPreviewCards({ recentShifts, recentClaims, recentUsers,
                       <p className="truncate text-sm font-semibold text-white/90 admin-light:text-slate-800" title={shift.id}>{shift.id || "Shift"}</p>
                       <p className="mt-1 truncate text-[11px] text-white/65 admin-light:text-slate-600" title={shift.conductor}>{shift.conductor}</p>
                       <p className="truncate text-[11px] text-white/45 admin-light:text-slate-500" title={`${shift.driver} · ${shift.unit}`}>{shift.driver} · {shift.unit}</p>
-                      <p className={`mt-2 text-[11px] ${shift.status === "Active" ? "text-[#62A0EA] admin-light:text-[#1A5FB4]" : "text-emerald-300 admin-light:text-emerald-700"}`}>
+                      <p className={`mt-2 text-[11px] ${shift.status === "Active" ? "font-semibold text-slate-200 admin-light:text-slate-800" : "text-white/50 admin-light:text-slate-500"}`}>
                         {shift.status}{timestamp ? ` · ${timestamp.full}` : ""}
                       </p>
                     </li>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GitBranch, ListPlus, Loader2, LocateFixed, MapPin, Plus, Save, Trash2, WandSparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, GitBranch, ListPlus, Loader2, LocateFixed, MapPin, Plus, Save, Trash2, WandSparkles } from "lucide-react";
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -279,22 +279,23 @@ export default function RouteEditor({ route, farePoints, onRouteChanged, onEditF
       </div>
 
       {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 admin-light:text-red-700">{error}</div>}
-      {message && <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300 admin-light:text-emerald-700">{message}</div>}
+      {message && <div className="flex items-center gap-2 rounded-xl border border-[#1E2D45] bg-[#1A2540] px-4 py-3 text-sm text-slate-200 admin-light:border-[#E2E8F0] admin-light:bg-[#F8FAFC] admin-light:text-slate-700"><CheckCircle2 size={16} aria-hidden="true" className="shrink-0 text-[#62A0EA] admin-light:text-[#1A5FB4]" />{message}</div>}
       {detourWarnings.length > 0 && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3">
-          <p className="text-sm font-bold text-amber-200 admin-light:text-amber-800">
+        <div className="rounded-xl border border-[#1E2D45] bg-[#1A2540] px-4 py-3 admin-light:border-[#E2E8F0] admin-light:bg-[#F8FAFC]">
+          <p className="flex items-start gap-2 text-sm font-bold text-white admin-light:text-slate-900">
+            <AlertTriangle size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-slate-400 admin-light:text-slate-500" />
             {waypointSource === "fare_points"
               ? "Some old Point Area pins are misplaced. Your live route was kept unchanged."
               : "The preview contains an unusually long road detour."}
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-amber-100/65 admin-light:text-amber-800/80">
+          <p className="mt-1 text-xs leading-relaxed text-slate-400 admin-light:text-slate-600">
             {waypointSource === "fare_points"
               ? "You can keep using the safe live route now, then correct these locations through the map picker when convenient."
               : "Check the red control points on the map. If the detour is intentional, you may continue and save the route."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {activeGeometry.length >= 2 && (
-              <button type="button" onClick={useActiveRoute} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500">
+              <button type="button" onClick={useActiveRoute} className="rounded-lg bg-[#62A0EA] admin-light:bg-[#1A5FB4] px-3 py-2 text-xs font-bold text-white hover:bg-[#4A8BD4] admin-light:hover:bg-[#164A8F]">
                 Keep Current Live Route
               </button>
             )}
@@ -303,7 +304,7 @@ export default function RouteEditor({ route, farePoints, onRouteChanged, onEditF
                 key={point.id}
                 type="button"
                 onClick={() => onEditFarePoint?.(point.point_number)}
-                className="rounded-lg border border-amber-300/30 px-3 py-2 text-xs font-semibold text-amber-100 admin-light:text-amber-800 hover:bg-amber-300/10"
+                className="rounded-lg border border-[#2A3A55] bg-[#131C2E] px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-[#1E2D45] admin-light:border-[#CBD5E1] admin-light:bg-white admin-light:text-slate-700 admin-light:hover:bg-[#F1F5F9]"
               >
                 Fix {point.name}
               </button>

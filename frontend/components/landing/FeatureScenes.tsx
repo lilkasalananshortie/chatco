@@ -157,7 +157,7 @@ export function GcashScene({ tone = "light" }: { tone?: Tone }) {
         {!paid && (
           <span
             aria-hidden
-            className="absolute inset-x-2 h-0.5 rounded-full bg-[#1A5FB4] shadow-[0_0_12px_2px_rgba(26,95,180,0.6)]"
+            className="absolute inset-x-2 h-0.5 rounded-full bg-[#1A5FB4]"
             style={{ top: `${8 + scan * 84}%` }}
           />
         )}
@@ -392,7 +392,7 @@ export function HailScene({ tone = "light" }: { tone?: Tone }) {
           onClick={() => setSent((s) => !s)}
           aria-pressed={sent}
           className={`relative w-28 h-28 rounded-full flex flex-col items-center justify-center gap-1 text-white text-sm font-bold shadow-xl transition-colors duration-300 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF6D3A] ${
-            sent ? "bg-emerald-500 shadow-emerald-500/30" : "bg-[#FF6D3A] hover:bg-[#E55A2B] shadow-[#FF6D3A]/30"
+            sent ? "bg-emerald-500 shadow-black/20" : "bg-[#FF6D3A] hover:bg-[#E55A2B] shadow-black/20"
           }`}
         >
           {sent ? <Check size={26} strokeWidth={3} /> : <Megaphone size={26} />}
@@ -555,7 +555,7 @@ export function SosScene({ tone = "dark" }: { tone?: Tone }) {
         onClick={press}
         aria-label={phase === "armed" ? "Tap again to send SOS" : "Send SOS"}
         className={`shrink-0 w-28 h-28 rounded-full grid place-items-center text-white transition-all duration-300 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white ${
-          phase === "sent" ? "bg-emerald-500 shadow-xl shadow-emerald-500/30" : "bg-[#EF4444] shadow-xl shadow-[#EF4444]/30"
+          phase === "sent" ? "bg-emerald-500 shadow-xl shadow-black/20" : "bg-[#EF4444] shadow-xl shadow-black/20"
         } ${phase === "armed" ? "ring-4 ring-white/70 ring-offset-4 ring-offset-transparent" : ""}`}
       >
         {phase === "sent" ? <Check size={40} strokeWidth={3} /> : <TriangleAlert size={40} />}

@@ -77,7 +77,7 @@ export default function LegalPage({ kind, description, sections }: {
             </nav>
           </aside>
 
-          <article aria-label={title} className="min-w-0 rounded-3xl border border-[#DAEEFF] bg-white p-6 shadow-xl shadow-[#1A5FB4]/5 md:p-10">
+          <article aria-label={title} className="min-w-0 rounded-3xl border border-[#DAEEFF] bg-white p-6 shadow-xl shadow-black/5 md:p-10">
             {sections.map((section, i) => (
               <section key={section.id} id={section.id} className="scroll-mt-28 border-b border-[#DAEEFF] py-7 first:pt-0 last:border-0 last:pb-0">
                 <div className="flex items-baseline gap-3">

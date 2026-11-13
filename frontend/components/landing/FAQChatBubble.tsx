@@ -197,7 +197,7 @@ export default function FAQChatBubble() {
       {/* Launcher */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-2xl bg-[#1A5FB4] text-white shadow-lg shadow-[#1A5FB4]/30 flex items-center justify-center transition-[background-color,transform] duration-200 hover:bg-[#164A8F] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1A5FB4]"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-2xl bg-[#1A5FB4] text-white shadow-lg shadow-black/20 flex items-center justify-center transition-[background-color,transform] duration-200 hover:bg-[#164A8F] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1A5FB4]"
         aria-label={isOpen ? "Close FAQ chat" : "Open FAQ chat"}
         aria-expanded={isOpen}
         aria-controls="faq-chat-panel"

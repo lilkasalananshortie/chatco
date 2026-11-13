@@ -354,9 +354,9 @@ export default function CommuterHome() {
             disabled={hailPending || (!isHailing && !canHail)}
             className={`relative overflow-hidden select-none touch-none [-webkit-touch-callout:none] w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 border-4 disabled:cursor-not-allowed ${
               isHailing
-                ? "bg-red-500 border-red-300 shadow-red-500/50 animate-bounce"
+                ? "bg-red-500 border-red-300 shadow-black/40"
                 : canHail
-                  ? "bg-[#FF6D3A] border-[#FF9A76] hover:bg-[#e55a2b] shadow-[#FF6D3A]/50"
+                  ? "bg-[#FF6D3A] border-[#FF9A76] hover:bg-[#e55a2b] shadow-black/40"
                   : "bg-gray-600 border-gray-500 shadow-gray-600/30 opacity-50 cursor-not-allowed"
             } ${hailPending ? "opacity-70" : ""}`}
           >
@@ -417,7 +417,7 @@ export default function CommuterHome() {
           {/* GCash Pay Card — commuter SCANS conductor's QR */}
           <div
             onClick={() => setShowScan(true)}
-            className="relative rounded-2xl border border-white/10 bg-gradient-to-br from-[#1A5FB4] to-[#123B6E] overflow-hidden cursor-pointer hover:from-[#1E6BC6] hover:to-[#154782] active:scale-[0.98] transition-all shadow-lg shadow-[#1A5FB4]/20"
+            className="relative rounded-2xl border border-white/10 bg-[#1A5FB4] overflow-hidden cursor-pointer hover:bg-[#164A8F] active:scale-[0.98] transition-all shadow-lg shadow-black/30"
           >
             {/* Subtle decorative circle */}
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/[0.04] rounded-full -translate-y-1/2 translate-x-1/3" />
@@ -490,7 +490,7 @@ export default function CommuterHome() {
           {/* GCash Pay Card — Desktop */}
           <div
             onClick={() => setShowScan(true)}
-            className="relative rounded-2xl border border-white/10 bg-gradient-to-br from-[#1A5FB4] to-[#123B6E] overflow-hidden cursor-pointer hover:from-[#1E6BC6] hover:to-[#154782] active:scale-[0.98] transition-all shadow-lg shadow-[#1A5FB4]/20"
+            className="relative rounded-2xl border border-white/10 bg-[#1A5FB4] overflow-hidden cursor-pointer hover:bg-[#164A8F] active:scale-[0.98] transition-all shadow-lg shadow-black/30"
           >
             {/* Subtle decorative circle */}
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/[0.04] rounded-full -translate-y-1/2 translate-x-1/3" />
@@ -547,9 +547,9 @@ export default function CommuterHome() {
             disabled={hailPending || (!isHailing && !canHail)}
             className={`relative overflow-hidden select-none touch-none [-webkit-touch-callout:none] w-full flex items-center justify-center gap-3 py-4 rounded-xl text-base font-bold transition-all duration-300 disabled:cursor-not-allowed ${
               isHailing
-                ? "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/40"
+                ? "bg-red-500 hover:bg-red-600 shadow-lg shadow-black/30"
                 : canHail
-                  ? "bg-[#FF6D3A] hover:bg-[#e55a2b] shadow-lg shadow-[#FF6D3A]/40 text-white"
+                  ? "bg-[#FF6D3A] hover:bg-[#e55a2b] shadow-lg shadow-black/30 text-white"
                   : "bg-gray-600 text-gray-300 light:bg-gray-200 light:text-gray-500 cursor-not-allowed shadow-none"
             } ${hailPending ? "opacity-70" : ""}`}
           >
@@ -616,7 +616,7 @@ export default function CommuterHome() {
             <button
               type="button"
               onClick={() => setShowScan(true)}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-gradient-to-br from-[#1A5FB4] to-[#123B6E] pl-2.5 pr-4 py-2 text-left cursor-pointer hover:from-[#1E6BC6] hover:to-[#154782] active:scale-[0.98] transition-all shadow-lg shadow-[#1A5FB4]/20"
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#1A5FB4] pl-2.5 pr-4 py-2 text-left cursor-pointer hover:bg-[#164A8F] active:scale-[0.98] transition-all shadow-lg shadow-black/30"
             >
               <span className="w-9 h-9 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -658,9 +658,9 @@ export default function CommuterHome() {
               disabled={hailPending || (!isHailing && !canHail)}
               className={`relative overflow-hidden select-none touch-none [-webkit-touch-callout:none] flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-300 cursor-pointer disabled:cursor-not-allowed ${
                 isHailing
-                  ? "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/40"
+                  ? "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-black/30"
                   : canHail
-                    ? "bg-[#FF6D3A] hover:bg-[#e55a2b] shadow-lg shadow-[#FF6D3A]/40 text-white"
+                    ? "bg-[#FF6D3A] hover:bg-[#e55a2b] shadow-lg shadow-black/30 text-white"
                     : "bg-gray-600 text-gray-300 light:bg-gray-200 light:text-gray-500 shadow-none"
               } ${hailPending ? "opacity-70" : ""}`}
             >

@@ -401,7 +401,7 @@ export default function AnnouncementsPage() {
       cellClassName: 'truncate',
       render: (_: string | null, item: Announcement) => (
         <span className="inline-flex items-center gap-1.5 text-xs text-slate-400 admin-light:text-slate-500">
-          {item.recipientId ? <Bell size={13} className="text-sky-400 admin-light:text-sky-700" /> : <Megaphone size={13} className="text-slate-500" />}
+          {item.recipientId ? <Bell size={13} className="text-slate-500" /> : <Megaphone size={13} className="text-slate-500" />}
           {item.recipientId ? 'Notification' : 'Announcement'}
         </span>
       ),
@@ -480,7 +480,7 @@ export default function AnnouncementsPage() {
           >
             <button
               onClick={handleOpenCreate}
-              className="inline-flex h-11 w-full flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-[#62A0EA] admin-light:bg-[#1A5FB4] px-4 text-sm font-bold text-white shadow-lg shadow-[#62A0EA]/25 admin-light:shadow-[#1A5FB4]/25 transition-colors hover:bg-[#4A8BD4] admin-light:hover:bg-[#164A8F] md:w-auto md:-translate-y-1"
+              className="inline-flex h-11 w-full flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-[#62A0EA] admin-light:bg-[#1A5FB4] px-4 text-sm font-bold text-white transition-colorshover:bg-[#4A8BD4] admin-light:hover:bg-[#164A8F] md:w-auto md:-translate-y-1"
             >
               <Plus size={16} />
               <span>New Announcement</span>
@@ -569,7 +569,7 @@ export default function AnnouncementsPage() {
                       }}
                       className={`flex-1 rounded-md px-2 text-sm font-semibold transition-all ${
                         selectedFilter === key
-                          ? 'bg-[#62A0EA] admin-light:bg-[#1A5FB4] text-white shadow-lg shadow-[#62A0EA]/30 admin-light:shadow-[#1A5FB4]/30'
+                          ? 'bg-[#62A0EA] admin-light:bg-[#1A5FB4] text-white'
                           : 'text-slate-500 hover:text-slate-300 admin-light:hover:text-slate-700 hover:bg-[#1A2540] admin-light:hover:bg-[#EEF2F7]'
                       }`}
                     >
@@ -660,10 +660,10 @@ export default function AnnouncementsPage() {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <p className="min-w-0 flex-1 break-words text-sm font-semibold text-white admin-light:text-slate-900">{item.title}</p>
                     {activeTab === 'announcements' && <span
-                      className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                      className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider ${
                         item.status === 'ARCHIVED'
-                          ? 'border-slate-500/30 bg-slate-500/10 text-slate-400 admin-light:text-slate-500'
-                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 admin-light:text-emerald-700'
+                          ? 'text-slate-500'
+                          : 'text-slate-300 admin-light:text-slate-700'
                       }`}
                     >
                       {item.displayStatus}

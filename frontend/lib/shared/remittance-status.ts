@@ -24,16 +24,3 @@ export function remittanceStatusVariant(status: RemittanceStatus): BadgeVariant 
       return "danger";
   }
 }
-
-/** Same status→category as remittanceStatusVariant(), re-skinned to the
- * conductor app shell's dark/glow badge language (translucent border+bg on
- * navy) instead of the admin flat Badge component — used by HistorySection
- * and OfficialReportModal (in-app view; buildPrintHTML has its own
- * light-paper equivalent). */
-export const REMITTANCE_STATUS_PILL_CLASSES: Record<BadgeVariant, string> = {
-  success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  info: "bg-sky-500/10 text-sky-400 border-sky-500/20",
-  warning: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  danger: "bg-red-500/10 text-red-400 border-red-500/20",
-  neutral: "bg-white/10 text-white/60 border-white/20",
-};

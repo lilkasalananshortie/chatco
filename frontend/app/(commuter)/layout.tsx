@@ -24,10 +24,11 @@ import { resumeShareTracking } from "@/lib/commuter/share-ride-tracker";
  * Spell out what the Rewards badge is counting for screen readers — the number
  * alone is ambiguous when it merges two different things.
  */
-function rewardsBadgeLabel(unread: number, vouchers: number): string {
+function rewardsBadgeLabel(unread: number, vouchers: number, renewalDue: boolean): string {
   const parts: string[] = [];
   if (unread > 0) parts.push(`${unread} unread update${unread === 1 ? "" : "s"}`);
   if (vouchers > 0) parts.push(`${vouchers} voucher${vouchers === 1 ? "" : "s"} ready to redeem`);
+  if (renewalDue) parts.push("student renewal due");
   return parts.join(", ");
 }
 
@@ -53,15 +54,18 @@ function CommuterLayoutInner({ children }: { children: React.ReactNode }) {
   // Both come from providers shared with the rewards page, so acting on either
   // there decrements this badge immediately. 0 renders no badge at all.
   const { unreadCount, claimUpdatesUnreadCount } = useAnnouncements();
-  const { availableVoucherCount } = useRewardsData();
-  const rewardsBadge = unreadCount + availableVoucherCount;
+  const { availableVoucherCount, renewal } = useRewardsData();
+  // The renewal notice on the rewards page counts as one until the renewal is
+  // approved, even after its reminder announcement has been read.
+  const renewalDue = renewal?.notice_active === true;
+  const rewardsBadge = unreadCount + availableVoucherCount + (renewalDue ? 1 : 0);
 
   const mobileActiveHref = showFeedbackScan ? "/feedback" : pathname;
   const { navRowRef, highlightRef, iconRefs } = useMobileNavHighlight(mobileActiveHref);
 
   const navItemsWithBadges = navItems.map(item => {
     if (item.href === "/rewards") {
-      return { ...item, badge: rewardsBadge, badgeLabel: rewardsBadgeLabel(unreadCount, availableVoucherCount) };
+      return { ...item, badge: rewardsBadge, badgeLabel: rewardsBadgeLabel(unreadCount, availableVoucherCount, renewalDue) };
     }
     if (item.href === "/lost-and-found") {
       const label = claimUpdatesUnreadCount > 0

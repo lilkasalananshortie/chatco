@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect,useMemo,useRef,useState } from "react";
+import { Flag,Info,MapPin } from "lucide-react";
 import { getEcho } from "@/lib/echo";
 import {
   loadFareMatrix,
@@ -141,17 +142,12 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
 
   const isSameBarangay=!!(pickupPoint&&dropoffPoint&&pickupPoint.pointNumber===dropoffPoint.pointNumber);
 
-  // Color utility classes for pickup/dropoff indicators
-  const pickupDotClass=isSameBarangay? "bg-violet-500":"bg-emerald-500";
-  const dropoffDotClass=isSameBarangay? "bg-violet-500":"bg-emerald-500";
-  const pickupBorderClass=isSameBarangay? "border-violet-500/50 bg-violet-500/10":"border-emerald-500/50 bg-emerald-500/10";
-  const dropoffBorderClass=isSameBarangay? "border-violet-500/50 bg-violet-500/10":"border-emerald-500/50 bg-emerald-500/10";
-  const pickupBadgeClass=isSameBarangay? "text-violet-400 bg-violet-500/10 light:text-violet-700":"text-emerald-400 bg-emerald-500/10 light:text-emerald-700";
-  const dropoffBadgeClass=isSameBarangay? "text-violet-400 bg-violet-500/10 light:text-violet-700":"text-emerald-400 bg-emerald-500/10 light:text-emerald-700";
-  const pickupTagClass=isSameBarangay? "bg-violet-500 text-white":"bg-emerald-500 text-white";
-  const dropoffTagClass=isSameBarangay? "bg-violet-500 text-white":"bg-emerald-500 text-white";
-  const pickupLabelClass=isSameBarangay? "text-violet-400":"text-emerald-400";
-  const dropoffLabelClass=isSameBarangay? "text-violet-400":"text-emerald-400";
+  // One neutral look for pickup and drop-off: the pin and flag icons and the
+  // labels tell them apart, and CHATCO Blue marks only the active selection.
+  const activeFieldClass="border-[#1A5FB4] bg-[#0B223A] light:border-[#1A5FB4] light:bg-white";
+  const idleFieldClass="border-[#1E3A5C] bg-[#0B223A] light:border-gray-200 light:bg-gray-50";
+  const selectedRowClass="border-[#1A5FB4] bg-[#0B223A] light:bg-[#F0F7FF]";
+  const roleTagClass="border border-[#2A4A70] bg-[#13283F] text-white light:border-gray-200 light:bg-gray-100 light:text-gray-700";
 
   // The fare bar runs to the screen bottom, under the translucent mobile nav
   // (app/(commuter)/layout.tsx: ~65px, ~75px from md, plus its pb-safe), and
@@ -216,20 +212,15 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
           <div className="relative">
             <button
               onClick={() => selectField("pickup")}
-              className={`w-full text-left p-3 rounded-xl border transition-all duration-200 pr-9 ${selectingField==="pickup"
-                  ? pickupBorderClass+" border"
-                  :pickupPoint
-                    ? "border-white/10 bg-white/5 light:border-gray-200 light:bg-gray-50"
-                    :"border-white/10 bg-white/5 light:border-gray-200 light:bg-gray-50"
-                }`}
+              className={`w-full text-left p-3 rounded-xl border transition-all duration-200 pr-9 ${selectingField==="pickup"? activeFieldClass:idleFieldClass}`}
             >
               <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pickupPoint? pickupDotClass+' shadow-sm':'bg-white/20 light:bg-gray-300'}`} />
+                <MapPin size={12} aria-hidden="true" className={`flex-shrink-0 ${pickupPoint? 'text-white/70 light:text-gray-600':'text-white/30 light:text-gray-400'}`} />
                 <span className="text-[10px] font-semibold text-white/40 light:text-gray-500 uppercase tracking-wider">
                   Pickup
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-1 ml-[18px]">
+              <div className="flex items-center justify-between mt-1 ml-5">
                 <span className={`text-sm font-medium ${pickupPoint? 'text-white light:text-gray-900':'text-white/30 light:text-gray-400'}`}>
                   {pickupPoint
                     ? pickupLandmark
@@ -238,7 +229,7 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
                     :"Select pickup location"}
                 </span>
                 {pickupPoint&&(
-                  <span className={`text-[10px] ${pickupBadgeClass} px-2 py-0.5 rounded-full ml-2 flex-shrink-0`}>
+                  <span className="text-[10px] font-semibold text-white/50 light:text-gray-500 ml-2 flex-shrink-0">
                     Brgy {pickupPoint.pointNumber}
                   </span>
                 )}
@@ -283,20 +274,15 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
           <div className="relative">
             <button
               onClick={() => selectField("dropoff")}
-              className={`w-full text-left p-3 rounded-xl border transition-all duration-200 pr-9 ${selectingField==="dropoff"
-                  ? dropoffBorderClass+" border"
-                  :dropoffPoint
-                    ? "border-white/10 bg-white/5 light:border-gray-200 light:bg-gray-50"
-                    :"border-white/10 bg-white/5 light:border-gray-200 light:bg-gray-50"
-                }`}
+              className={`w-full text-left p-3 rounded-xl border transition-all duration-200 pr-9 ${selectingField==="dropoff"? activeFieldClass:idleFieldClass}`}
             >
               <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dropoffDotClass} ${dropoffPoint? 'shadow-sm':'bg-white/20 light:bg-gray-300'}`} />
+                <Flag size={12} aria-hidden="true" className={`flex-shrink-0 ${dropoffPoint? 'text-white/70 light:text-gray-600':'text-white/30 light:text-gray-400'}`} />
                 <span className="text-[10px] font-semibold text-white/40 light:text-gray-500 uppercase tracking-wider">
                   Drop-off
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-1 ml-[18px]">
+              <div className="flex items-center justify-between mt-1 ml-5">
                 <span className={`text-sm font-medium ${dropoffPoint? 'text-white light:text-gray-900':'text-white/30 light:text-gray-400'}`}>
                   {dropoffPoint
                     ? dropoffLandmark
@@ -305,7 +291,7 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
                     :"Select drop-off location"}
                 </span>
                 {dropoffPoint&&(
-                  <span className={`text-[10px] ${dropoffBadgeClass} px-2 py-0.5 rounded-full ml-2 flex-shrink-0`}>
+                  <span className="text-[10px] font-semibold text-white/50 light:text-gray-500 ml-2 flex-shrink-0">
                     Brgy {dropoffPoint.pointNumber}
                   </span>
                 )}
@@ -327,9 +313,9 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
 
           {/* Same barangay warning */}
           {isSameBarangay&&(
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
-              <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />
-              <span className="text-[10px] text-violet-300 light:text-violet-700 font-medium">Same pickup & drop-off — both locations shown in violet</span>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0B223A] border border-[#1E3A5C] light:bg-gray-50 light:border-gray-200">
+              <Info size={13} aria-hidden="true" className="flex-shrink-0 text-white/60 light:text-gray-500" />
+              <span className="text-[11px] text-white/70 light:text-gray-600 font-medium">Pickup and drop-off are in the same barangay.</span>
             </div>
           )}
 
@@ -414,13 +400,6 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
           const isExpanded=expandedBarangay===point.pointNumber;
           const pointSubDropoffs=subDropoffPoints(point);
 
-          // Color classes for barangay list items (green default, violet when same)
-          const itemPickupBg=isSameBarangay? "bg-violet-500/15 border-violet-500/40":"bg-emerald-500/15 border-emerald-500/40";
-          const itemDropoffBg=isSameBarangay? "bg-violet-500/15 border-violet-500/40":"bg-emerald-500/15 border-emerald-500/40";
-          const itemBothBg="bg-violet-500/20 border-violet-500/40";
-          const itemPickupLabel=isSameBarangay? pickupLabelClass:pickupLabelClass;
-          const itemDropoffLabel=isSameBarangay? dropoffLabelClass:dropoffLabelClass;
-
           return (
             <div key={point.pointNumber} className="mb-1">
               <div
@@ -446,11 +425,7 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
                 }}
                 onKeyDown={(e) => { if(e.key==="Enter"||e.key===" ") { e.preventDefault(); (e.target as HTMLElement).click(); } }}
                 className={`w-full text-left p-3 rounded-xl transition-colors cursor-pointer border ${isSelected
-                    ? isPickup&&isDropoff
-                      ? itemBothBg
-                      :isPickup
-                        ? itemPickupBg
-                        :itemDropoffBg
+                    ? selectedRowClass
                     :"border-white/[0.04] hover:bg-white/[0.04] light:border-transparent light:hover:bg-gray-100"
                   }`}
               >
@@ -475,10 +450,10 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
 
                   <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
                     {isPickup&&(
-                      <span className={`text-[8px] font-bold ${itemPickupLabel} ${pickupTagClass} px-1.5 py-0.5 rounded`}>PICKUP</span>
+                      <span className={`text-[8px] font-bold ${roleTagClass} px-1.5 py-0.5 rounded`}>PICKUP</span>
                     )}
                     {isDropoff&&(
-                      <span className={`text-[8px] font-bold ${itemDropoffLabel} ${dropoffTagClass} px-1.5 py-0.5 rounded`}>DROP-OFF</span>
+                      <span className={`text-[8px] font-bold ${roleTagClass} px-1.5 py-0.5 rounded`}>DROP-OFF</span>
                     )}
 
                     <button
@@ -522,10 +497,10 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
                       setExpandedBarangay(null);
                       if(selectingField==="pickup") selectField("dropoff");
                     }}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md w-full text-left transition-colors border cursor-pointer bg-white/[0.02] border-transparent hover:bg-amber-500/5 hover:border-amber-500/20"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md w-full text-left transition-colors border cursor-pointer bg-white/[0.02] border-transparent hover:bg-white/5 light:hover:bg-gray-100"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
-                    <span className="text-[11px] text-amber-400/70 light:text-amber-700">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/30 light:bg-gray-400" />
+                    <span className="text-[11px] text-white/60 light:text-gray-600">
                       Use Point Area only
                     </span>
                   </button>
@@ -533,14 +508,6 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
                     const isLandmarkPickup=pickupPoint?.pointNumber===point.pointNumber&&pickupLandmark===landmark;
                     const isLandmarkDropoff=dropoffPoint?.pointNumber===point.pointNumber&&dropoffLandmark===landmark;
                     const isLandmarkSelected=isLandmarkPickup||isLandmarkDropoff;
-
-                    // Landmark color classes with green/violet logic
-                    const lmPickupBgCls=isSameBarangay? "bg-violet-500/10 border-violet-500/30":"bg-emerald-500/10 border-emerald-500/30";
-                    const lmDropoffBgCls=isSameBarangay? "bg-violet-500/10 border-violet-500/30":"bg-emerald-500/10 border-emerald-500/30";
-                    const lmPickupDotCls=isSameBarangay? "bg-violet-400":"bg-emerald-400";
-                    const lmDropoffDotCls=isSameBarangay? "bg-violet-400":"bg-emerald-400";
-                    const lmPickupTextCls=isSameBarangay? "text-violet-400 light:text-violet-700":"text-emerald-400 light:text-emerald-700";
-                    const lmDropoffTextCls=isSameBarangay? "text-violet-400 light:text-violet-700":"text-emerald-400 light:text-emerald-700";
 
                     return (
                       <div
@@ -565,32 +532,18 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
                         }}
                         onKeyDown={(e) => { if(e.key==="Enter"||e.key===" ") { e.preventDefault(); (e.target as HTMLElement).click(); } }}
                         className={`flex items-center gap-2 px-2 py-1.5 rounded-md w-full text-left transition-colors border cursor-pointer ${isLandmarkSelected
-                            ? isLandmarkPickup&&isLandmarkDropoff
-                              ? "bg-violet-500/15 border-violet-500/30"
-                              :isLandmarkPickup
-                                ? lmPickupBgCls
-                                :lmDropoffBgCls
+                            ? selectedRowClass
                             :"bg-white/[0.02] border-transparent hover:bg-white/5 light:hover:bg-gray-100"
                           }`}
                       >
-                        <div className={`w-1.5 h-1.5 rounded-full ${isLandmarkSelected
-                            ? isLandmarkPickup? lmPickupDotCls:lmDropoffDotCls
-                            :"bg-white/20 light:bg-gray-300"
-                          }`} />
-                        <span className={`text-[11px] ${isLandmarkSelected
-                            ? isLandmarkPickup? lmPickupTextCls:lmDropoffTextCls
-                            :"text-white/40 light:text-gray-600"
-                          }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${isLandmarkSelected? "bg-[#62A0EA] light:bg-[#1A5FB4]":"bg-white/20 light:bg-gray-300"}`} />
+                        <span className={`text-[11px] ${isLandmarkSelected? "font-medium text-white light:text-gray-900":"text-white/40 light:text-gray-600"}`}>
                           {landmark}
                         </span>
-                        {isLandmarkPickup&&!isLandmarkDropoff&&(
-                          <span className={`text-[8px] font-bold ${lmPickupTextCls} bg-white/5 light:bg-white px-1 py-0.5 rounded ml-auto`}>PICKUP</span>
-                        )}
-                        {isLandmarkDropoff&&!isLandmarkPickup&&(
-                          <span className={`text-[8px] font-bold ${lmDropoffTextCls} bg-white/5 light:bg-white px-1 py-0.5 rounded ml-auto`}>DROP-OFF</span>
-                        )}
-                        {isLandmarkPickup&&isLandmarkDropoff&&(
-                          <span className="text-[8px] font-bold text-violet-400 light:text-violet-700 bg-violet-500/10 px-1 py-0.5 rounded ml-auto">BOTH</span>
+                        {isLandmarkSelected&&(
+                          <span className={`text-[8px] font-bold ${roleTagClass} px-1 py-0.5 rounded ml-auto`}>
+                            {isLandmarkPickup&&isLandmarkDropoff? "BOTH":isLandmarkPickup? "PICKUP":"DROP-OFF"}
+                          </span>
                         )}
                       </div>
                     );
@@ -608,14 +561,14 @@ export default function FareContent({ variant="page",onClose }: FareContentProps
           {/* Route confirmation with dynamic color indicators */}
           <div className="mb-2 flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <div className={`w-2.5 h-2.5 rounded-full ${pickupDotClass}`} />
+              <MapPin size={12} aria-hidden="true" className="flex-shrink-0 text-white/50 light:text-gray-500" />
               <span className="text-xs text-white/70 light:text-gray-700 font-medium">{pickupPoint?.name}{pickupLandmark? ` · ${pickupLandmark}`:""}</span>
             </div>
             <svg className="w-3 h-3 text-white/20 light:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
             </svg>
             <div className="flex items-center gap-1.5">
-              <div className={`w-2.5 h-2.5 rounded-full ${dropoffDotClass}`} />
+              <Flag size={12} aria-hidden="true" className="flex-shrink-0 text-white/50 light:text-gray-500" />
               <span className="text-xs text-white/70 light:text-gray-700 font-medium">{dropoffPoint?.name}{dropoffLandmark? ` · ${dropoffLandmark}`:""}</span>
             </div>
           </div>

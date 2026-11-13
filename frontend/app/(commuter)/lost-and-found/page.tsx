@@ -546,7 +546,7 @@ export default function LostAndFoundPage() {
                   </div>
                 )}
                 <div className="pointer-events-none absolute left-0 top-0 p-4">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-[#1E3A5C] bg-[#0B223A] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
                     <Tag className="h-3 w-3" />
                     {detailItem.category}
                   </span>
@@ -600,7 +600,7 @@ export default function LostAndFoundPage() {
                   <div className="mb-5">
                     <h2 id="lf-detail-title" className="pr-11 text-xl font-bold leading-tight text-white light:text-gray-900">{detailItem.itemName}</h2>
                     {detailDeadline && (
-                      <p className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${detailDeadline.isUrgent ? "text-amber-300 light:text-amber-700" : "text-white/60 light:text-gray-500"}`}>
+                      <p className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${detailDeadline.isUrgent ? "text-white light:text-gray-900" : "text-white/60 light:text-gray-500"}`}>
                         <CalendarDays className="h-3.5 w-3.5" />
                         Claim by {detailDeadline.dateLabel} &middot; {detailDeadline.label}
                       </p>
@@ -619,12 +619,12 @@ export default function LostAndFoundPage() {
                       means the item was already handed over to them, and a
                       proof/handover reminder no longer applies. */}
                   {claims.get(detailItem.id)?.status !== "RELEASED" && (
-                    <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 light:border-amber-300 light:bg-amber-50">
+                    <div className="rounded-xl border border-[#1E3A5C] bg-[#0B223A] p-3 light:border-gray-200 light:bg-gray-50">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-300 light:text-amber-600" />
+                        <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-white/70 light:text-gray-500" />
                         <div>
-                          <p className="text-xs font-bold text-amber-100 light:text-amber-900">Claim reminder</p>
-                          <p className="mt-1 text-xs leading-5 text-amber-100/80 light:text-amber-800">Submit specific proof only if this item is yours. Staff may ask for a valid ID during handover.</p>
+                          <p className="text-xs font-bold text-white light:text-gray-900">Claim reminder</p>
+                          <p className="mt-1 text-xs leading-5 text-white/70 light:text-gray-600">Submit specific proof only if this item is yours. Staff may ask for a valid ID during handover.</p>
                         </div>
                       </div>
                     </div>

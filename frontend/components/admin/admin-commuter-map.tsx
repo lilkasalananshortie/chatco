@@ -117,9 +117,9 @@ function getBearing(start: [number, number], end: [number, number]): number {
 
 const getCapacityConfig = (capacity: VehicleCapacity) => {
   switch (capacity) {
-    case "AVAILABLE": return { color: "#22c55e", label: "Available", twBg: "bg-green-500/10", twText: "text-green-400", twBorder: "border-green-500/30" };
-    case "STANDING": return { color: "#eab308", label: "Standing", twBg: "bg-yellow-500/10", twText: "text-yellow-400", twBorder: "border-yellow-500/30" };
-    case "FULL": return { color: "#ef4444", label: "Full", twBg: "bg-red-500/10", twText: "text-red-400", twBorder: "border-red-500/30" };
+    case "AVAILABLE": return { color: "#22c55e", label: "Available" };
+    case "STANDING": return { color: "#eab308", label: "Standing" };
+    case "FULL": return { color: "#ef4444", label: "Full" };
   }
 };
 
@@ -508,14 +508,7 @@ export default function AdminCommuterMap({
           // Skip vehicles without valid coordinates.
           if (vehicle.lat === null || vehicle.lng === null) return null;
           const capacityConfig = getCapacityConfig(vehicle.capacity);
-          const statusConfig = vehicle.is_on_break
-            ? {
-                label: 'On break',
-                twBg: 'bg-sky-500/10',
-                twText: 'text-sky-500',
-                twBorder: 'border-sky-500/30',
-              }
-            : capacityConfig;
+          const statusLabel = vehicle.is_on_break ? 'On break' : capacityConfig.label;
           return (
             <SmoothVehicleMarker
               key={`live-${vehicle.id}`}
@@ -525,7 +518,7 @@ export default function AdminCommuterMap({
             >
               <UnitPopup
                 title={vehicle.plate_number}
-                status={{ label: statusConfig.label, tone: vehicle.is_on_break ? "info" : capacityTone(vehicle.capacity) }}
+                status={{ label: statusLabel, tone: vehicle.is_on_break ? "info" : capacityTone(vehicle.capacity) }}
                 details={[
                   { label: "Unit", value: vehicle.unit_number },
                   { label: "Driver", value: vehicle.driver_name ?? "—" },

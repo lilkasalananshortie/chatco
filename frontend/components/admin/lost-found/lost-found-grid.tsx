@@ -75,15 +75,16 @@ function formatPostedDate(dateStr: string): string {
   }
 }
 
-/** Status as coloured text + icon (no pill), same colour meaning as before. */
+/** Status as plain text + icon (no pill); the icon tells states apart and only a rejection is red. */
+const STATUS_TEXT = 'text-slate-200 admin-light:text-slate-800';
 const STATUS_STYLES: Record<LostFoundItem['status'], { icon: LucideIcon; text: string }> = {
-  Unmatched: { icon: Clock3, text: 'text-amber-300 admin-light:text-amber-700' },
-  Claimed: { icon: UserRound, text: 'text-[#8CB9F0] admin-light:text-[#1A5FB4]' },
-  Released: { icon: CheckCircle2, text: 'text-emerald-300 admin-light:text-emerald-700' },
-  Returned: { icon: CheckCircle2, text: 'text-emerald-300 admin-light:text-emerald-700' },
-  Closed: { icon: CheckCircle2, text: 'text-emerald-300 admin-light:text-emerald-700' },
+  Unmatched: { icon: Clock3, text: STATUS_TEXT },
+  Claimed: { icon: UserRound, text: STATUS_TEXT },
+  Released: { icon: CheckCircle2, text: STATUS_TEXT },
+  Returned: { icon: CheckCircle2, text: STATUS_TEXT },
+  Closed: { icon: CheckCircle2, text: STATUS_TEXT },
   Rejected: { icon: XCircle, text: 'text-red-300 admin-light:text-red-700' },
-  Expired: { icon: Archive, text: 'text-red-300 admin-light:text-red-700' },
+  Expired: { icon: Archive, text: STATUS_TEXT },
 };
 const FALLBACK_STATUS = { icon: Clock3, text: 'text-slate-400 admin-light:text-slate-500' };
 
@@ -188,7 +189,7 @@ export function LostFoundGrid({ items, claimSummaries = {}, onViewClaims, onView
                   type="button"
                   onClick={() => onClose(item.id)}
                   disabled={isActing}
-                  className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-300 admin-light:text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#62A0EA] admin-light:bg-[#1A5FB4] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#4A8BD4] admin-light:hover:bg-[#164A8F] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                   Close after handover
@@ -200,7 +201,7 @@ export function LostFoundGrid({ items, claimSummaries = {}, onViewClaims, onView
                   type="button"
                   onClick={() => onReactivate(item.id)}
                   disabled={isActing}
-                  className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-300 admin-light:text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#62A0EA] admin-light:bg-[#1A5FB4] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#4A8BD4] admin-light:hover:bg-[#164A8F] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   Reactivate item
@@ -220,13 +221,11 @@ export function LostFoundGrid({ items, claimSummaries = {}, onViewClaims, onView
                 label={`${isClaimed ? 'View claimed item' : 'View claims'}, ${claimSummary.total} claim${claimSummary.total === 1 ? '' : 's'}${hasNewClaims ? ', new claims' : ''}`}
                 className={hasNewClaims
                   ? 'text-white admin-light:text-slate-900 hover:bg-[#1A2540] admin-light:hover:bg-[#EEF2F7]'
-                  : isClaimed
-                    ? 'text-emerald-300 admin-light:text-emerald-700 hover:bg-emerald-500/10'
-                    : 'text-slate-300 admin-light:text-slate-700 hover:bg-[#1A2540] admin-light:hover:bg-[#EEF2F7] hover:text-white admin-light:hover:text-slate-900'}
+                  : 'text-slate-300 admin-light:text-slate-700 hover:bg-[#1A2540] admin-light:hover:bg-[#EEF2F7] hover:text-white admin-light:hover:text-slate-900'}
               >
                 {isClaimed ? <UserRound className="h-4 w-4" aria-hidden="true" /> : <ListChecks className="h-4 w-4" aria-hidden="true" />}
                 <span className="hidden sm:inline">{isClaimed ? 'Claimed' : 'Claims'}</span>
-                <span className={`tabular-nums ${hasNewClaims ? 'text-[#FF6D3A]' : isClaimed ? 'text-emerald-300/70 admin-light:text-emerald-700' : 'text-slate-500'}`}>{claimSummary.total}</span>
+                <span className={`tabular-nums ${hasNewClaims ? 'text-[#FF6D3A]' : 'text-slate-500'}`}>{claimSummary.total}</span>
                 {hasNewClaims && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#FF6D3A]" />}
               </ActionButton>
               {isItemEditable(item.status) && (

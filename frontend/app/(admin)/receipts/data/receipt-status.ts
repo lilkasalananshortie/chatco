@@ -1,7 +1,7 @@
 // app/(admin)/receipts/data/receipt-status.ts
 //
-// Single source of truth for how a receipt's payment status and payment
-// method are presented as badges.
+// Single source of truth for how a receipt's payment status is presented.
+// Payment methods are plain neutral text with an icon (receipts-ledger.tsx).
 //
 // This used to live inline in the receipts column renderer, with a `default:`
 // arm that rendered a green "Completed" badge. That made any status the
@@ -10,7 +10,7 @@
 // way round: if we don't know, we say we don't know.
 
 import type { BadgeVariant } from '@/components/shared/badge';
-import type { PaymentMethod, ReceiptStatus } from './receipts-data';
+import type { ReceiptStatus } from './receipts-data';
 
 /**
  * Badge colour per status.
@@ -46,21 +46,4 @@ export function statusBadge(status: string): { label: string; variant: BadgeVari
   return variant
     ? { label: status, variant }
     : { label: 'Unknown', variant: 'neutral' };
-}
-
-/** Payment-method text color. Keyed the same way, with the same fail-safe. */
-const METHOD_STYLES: Record<PaymentMethod, string> = {
-  Cash: 'text-emerald-400 admin-light:text-emerald-700',
-  Gcash: 'text-[#62A0EA] admin-light:text-[#1A5FB4]',
-  Voucher: 'text-pink-400 admin-light:text-pink-700',
-  Unknown: 'text-slate-300 admin-light:text-slate-700',
-};
-
-/**
- * Resolve a payment method to its text color. An unrecognised method must
- * not fall through to Cash — Cash is the method the conductor physically
- * remits, so mislabelling inflates the expected cash drawer.
- */
-export function methodStyle(method: string): string {
-  return METHOD_STYLES[method as PaymentMethod] ?? METHOD_STYLES.Unknown;
 }

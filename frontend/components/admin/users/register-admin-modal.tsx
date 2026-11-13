@@ -321,7 +321,8 @@ export function RegisterAdminModal({ isOpen, onClose, onCreated }: RegisterAdmin
             <SummaryRow label="Role" value="Admin" />
             <SummaryRow label="Profile picture" value={profilePicture?.name ?? 'Not provided'} />
           </dl>
-          <div className="mt-4 rounded-md border border-sky-400/20 bg-sky-400/5 p-3 text-sm text-sky-300 admin-light:border-sky-200 admin-light:bg-sky-50 admin-light:text-sky-800">
+          <div className="mt-4 flex items-start gap-2 rounded-md border border-[#1E2D45] bg-[#1A2540] p-3 text-sm text-slate-200 admin-light:border-[#E2E8F0] admin-light:bg-[#F8FAFC] admin-light:text-slate-700">
+            <Mail size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-slate-400 admin-light:text-slate-500" />
             Continuing will create this admin account and send temporary credentials to the email shown above.
           </div>
           <footer className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -335,13 +336,15 @@ export function RegisterAdminModal({ isOpen, onClose, onCreated }: RegisterAdmin
 
       {stage === 'result' && (
         <section aria-labelledby="admin-register-result-title" className="flex flex-col items-center px-2 py-5 text-center">
-          <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-full border ${emailSent ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300 admin-light:border-emerald-200 admin-light:bg-emerald-50 admin-light:text-emerald-700' : 'border-amber-400/25 bg-amber-400/10 text-amber-300 admin-light:border-amber-200 admin-light:bg-amber-50 admin-light:text-amber-700'}`}><Check size={27} aria-hidden="true" /></div>
+          {emailSent
+            ? <Check size={36} aria-hidden="true" className="mb-4 text-[#62A0EA] admin-light:text-[#1A5FB4]" />
+            : <AlertCircle size={36} aria-hidden="true" className="mb-4 text-red-400 admin-light:text-red-600" />}
           <h2 id="admin-register-result-title" className="text-xl font-bold text-white admin-light:text-slate-900">Admin account created</h2>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-400 admin-light:text-slate-500">{fullName} can sign in with {form.email.trim()}.</p>
           {emailSent ? (
-            <p role="status" className="mt-4 w-full rounded-md border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-300 admin-light:border-emerald-200 admin-light:bg-emerald-50 admin-light:text-emerald-800">Temporary credentials were sent to {form.email.trim()}. The new Admin must set a new password at first sign-in.</p>
+            <p role="status" className="mt-4 w-full rounded-md border border-[#1E2D45] bg-[#1A2540] p-3 text-sm font-medium text-slate-200 admin-light:border-[#E2E8F0] admin-light:bg-[#F8FAFC] admin-light:text-slate-700">Temporary credentials were sent to {form.email.trim()}. The new Admin must set a new password at first sign-in.</p>
           ) : (
-            <p role="status" className="mt-4 w-full rounded-md border border-amber-500/25 bg-amber-500/10 p-3 text-sm font-medium text-amber-300 admin-light:border-amber-200 admin-light:bg-amber-50 admin-light:text-amber-800">The account was created, but the credentials email could not be sent. Ask the new Admin to use Forgot Password to recover access.</p>
+            <p role="status" className="mt-4 w-full rounded-md border border-[#1E2D45] bg-[#1A2540] p-3 text-sm font-medium text-slate-200 admin-light:border-[#E2E8F0] admin-light:bg-[#F8FAFC] admin-light:text-slate-700">The account was created, but the credentials email could not be sent. Ask the new Admin to use Forgot Password to recover access.</p>
           )}
           <button type="button" onClick={handleClose} className="mt-6 min-h-11 w-full rounded-md bg-[#62A0EA] admin-light:bg-[#1A5FB4] px-4 text-sm font-semibold text-[#071A2E] admin-light:text-white transition-colors hover:bg-[#7FB3F0] admin-light:hover:bg-[#164A8F] sm:w-auto">Done</button>
         </section>

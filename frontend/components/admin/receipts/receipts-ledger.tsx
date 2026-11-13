@@ -4,15 +4,8 @@
 import { Banknote, Ticket, Wallet, type LucideIcon } from 'lucide-react';
 import type { Receipt } from '@/app/(admin)/receipts/data/receipts-data';
 import { statusBadge } from '@/app/(admin)/receipts/data/receipt-status';
+import { Badge } from '@/components/admin/ui/badge';
 import { formatPeso } from '@/lib/utils/display';
-
-const STATUS_DOT_CLASSES = {
-  success: 'bg-green-400 admin-light:bg-green-600',
-  warning: 'bg-yellow-400 admin-light:bg-yellow-600',
-  danger: 'bg-red-400 admin-light:bg-red-600',
-  info: 'bg-blue-400 admin-light:bg-blue-600',
-  neutral: 'bg-slate-400 admin-light:bg-slate-500',
-} as const;
 
 // One neutral tone for every method; the icon tells them apart.
 const METHOD_ICON: Partial<Record<Receipt['paymentMethod'], LucideIcon>> = { Cash: Banknote, Gcash: Wallet, Voucher: Ticket };
@@ -67,8 +60,7 @@ function Status({ receipt }: { receipt: Receipt }) {
   const { label, variant } = statusBadge(receipt.status);
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5">
-      <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_CLASSES[variant]}`} />
-      <span className="truncate text-slate-200 admin-light:text-slate-700">{label}</span>
+      <Badge variant={variant}>{label}</Badge>
       {receipt.reconciliationStatus === 'REFUND_REQUIRED' && (
         <span className="truncate font-semibold text-amber-300 admin-light:text-amber-700" title={receipt.reconciliationReason ?? undefined}>· Refund required</span>
       )}

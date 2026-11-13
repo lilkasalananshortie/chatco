@@ -3,8 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
-  ArrowRight, Bell, CheckCheck, ChevronRight, CircleHelp,
-  GraduationCap, Loader2, QrCode, RefreshCw, Ticket,
+  AlertCircle, ArrowRight, Bell, CheckCheck, CheckCircle2, ChevronRight, CircleHelp,
+  Clock3, GraduationCap, Loader2, QrCode, RefreshCw, Ticket,
 } from "lucide-react";
 import { VoucherWallet } from "@/components/commuter/rewards/voucher-wallet";
 import { PageTabs } from "@/components/admin/ui/page-tabs";
@@ -15,7 +15,8 @@ import type { Announcement, Voucher, VoucherTab } from "./types";
 import { announcementCategory } from "@/lib/shared/announcement-category";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
-import { getRenewalState, RENEWAL_LABELS, type RenewalState } from "@/lib/shared/services/student-renewal.service";
+import { useRewardsData } from "@/contexts/rewards-context";
+import { RENEWAL_LABELS, type RenewalState } from "@/lib/shared/services/student-renewal.service";
 
 const ReceiptScanModal = dynamic(
   () => import("@/components/commuter/modals/receipt-scan-modal"),
@@ -36,20 +37,15 @@ function voucherStatus(voucher: Voucher): Voucher["status"] {
 
 export default function RewardsPage() {
   const { commuterProfile } = useAuth();
-  const [renewal, setRenewal] = useState<RenewalState | null>(null);
+  // Renewal state is shared with the tab badge (contexts/rewards-context.tsx).
+  const { renewal, refreshRenewal } = useRewardsData();
   const {
     data, isLoading, error, refetch, progressPercent, ridesRemaining,
   } = useRewards();
   const { announcements, isLoading: announcementsLoading, markAsRead, markAllAsRead, unreadCount } = useAnnouncements();
   const [section, setSection] = useState<"rewards" | "announcements">("rewards");
-  useEffect(() => {
-    if (commuterProfile?.commuterType !== 'STUDENT' && commuterProfile?.appliedType !== 'STUDENT') return;
-    const controller = new AbortController();
-    const refreshRenewal = () => { void getRenewalState(controller.signal).then(value => { if (!controller.signal.aborted) setRenewal(value); }).catch(() => {}); };
-    refreshRenewal();
-    window.addEventListener('focus', refreshRenewal);
-    return () => { controller.abort(); window.removeEventListener('focus', refreshRenewal); };
-  }, [commuterProfile?.commuterType, commuterProfile?.appliedType, section]);
+  // Opening the page or switching sections re-reads it, as before.
+  useEffect(() => { refreshRenewal(); }, [refreshRenewal, section]);
   const [voucherTab, setVoucherTab] = useState<VoucherTab>("available");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [showReceiptScan, setShowReceiptScan] = useState(false);
@@ -143,7 +139,7 @@ export default function RewardsPage() {
               </div>
             ) : (
               <>
-                {error && <p role="alert" className="mb-5 border-l-2 border-amber-400 pl-3 text-sm text-amber-300 light:text-amber-700">{error} Showing your last loaded rewards.</p>}
+                {error && <p role="alert" className="mb-5 flex items-start gap-2 text-sm text-red-400 light:text-red-600"><AlertCircle size={16} aria-hidden="true" className="mt-0.5 shrink-0" /><span>{error} Showing your last loaded rewards.</span></p>}
                 <section aria-labelledby="mobile-progress-title" className="relative flex flex-col items-center gap-8 rounded-2xl border border-white/10 bg-[#071A2E] p-6 pt-12 shadow-xl shadow-black/20 light:border-gray-200 light:bg-white light:shadow-black/5 md:flex-row md:p-8 lg:hidden">
                   <button type="button" onClick={() => setShowHelp(true)} aria-label="How rewards work" title="How rewards work" className="absolute left-4 top-4 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#050F1A] text-white/50 hover:text-white light:border-gray-200 light:bg-gray-50 light:text-gray-500 light:hover:text-gray-900">
                     <CircleHelp size={16} />
@@ -163,7 +159,7 @@ export default function RewardsPage() {
                     <p className="mb-6 text-sm leading-relaxed text-white/50 light:text-gray-500">Complete {data.ridesNeeded} paid rides to earn a free ride voucher. GCash counts automatically; cash counts once you scan the receipt QR.</p>
                     <dl className="flex flex-wrap justify-center gap-6 md:justify-start">
                       <div><dt className="text-[10px] font-semibold uppercase text-white/50 light:text-gray-500">Total Rides</dt><dd className="mt-1 text-lg font-bold tabular-nums">{data.totalRides}</dd></div>
-                      <div><dt className="text-[10px] font-semibold uppercase text-white/50 light:text-gray-500">Vouchers Available</dt><dd className="mt-1 text-lg font-bold tabular-nums text-emerald-400 light:text-emerald-600">{available.length}</dd></div>
+                      <div><dt className="text-[10px] font-semibold uppercase text-white/50 light:text-gray-500">Vouchers Available</dt><dd className="mt-1 text-lg font-bold tabular-nums">{available.length}</dd></div>
                     </dl>
                   </div>
                 </section>
@@ -268,7 +264,7 @@ function RenewalNotice({ renewal }: { renewal: RenewalState }) {
   const pending = renewal.status === "PENDING";
   const correction = renewal.status === "NEEDS_CORRECTION";
   const status = renewal.status === "NOT_RENEWED" ? "For renewal" : RENEWAL_LABELS[renewal.status];
-  const statusColor = pending ? "text-[#99C1F1] light:text-[#1A5FB4]" : "text-amber-200 light:text-amber-700";
+  const statusColor = "text-white/85 light:text-gray-700";
   const title = pending ? "Your proof is being reviewed" : correction ? "Update your enrollment proof" : "Renew your student status";
   const description = pending
     ? "We’ll notify you when the review is complete. No need to submit again."
@@ -357,14 +353,16 @@ function RenewalNotice({ renewal }: { renewal: RenewalState }) {
         </div>
         <div>
           <dt className="text-xs text-white/50 light:text-gray-500">Student discount</dt>
-          <dd className={`mt-1 inline-flex items-center gap-2 text-sm font-medium ${renewal.discount_eligible ? "text-emerald-300 light:text-emerald-700" : "text-amber-200 light:text-amber-700"}`}>
-            <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${renewal.discount_eligible ? "bg-emerald-300 light:bg-emerald-500" : "bg-amber-200 light:bg-amber-500"}`} />
+          <dd className="mt-1 inline-flex items-center gap-2 text-sm font-medium">
+            {renewal.discount_eligible
+              ? <CheckCircle2 size={15} aria-hidden="true" className="shrink-0 text-white/60 light:text-gray-500" />
+              : <Clock3 size={15} aria-hidden="true" className="shrink-0 text-white/60 light:text-gray-500" />}
             {renewal.discount_eligible ? "Available" : "Unavailable"}
           </dd>
         </div>
         {correction && renewal.application?.correction_due_at && <div className="sm:col-span-2">
           <dt className="text-xs text-white/50 light:text-gray-500">Correction deadline</dt>
-          <dd className="mt-1 text-sm font-medium text-amber-200 light:text-amber-700">{new Date(renewal.application.correction_due_at).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" })} (Philippine time)</dd>
+          <dd className="mt-1 text-sm font-medium">{new Date(renewal.application.correction_due_at).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" })} (Philippine time)</dd>
         </div>}
       </dl>
       <Link href="/student-renewal" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#1A5FB4] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#164A8F] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#99C1F1] sm:w-auto">

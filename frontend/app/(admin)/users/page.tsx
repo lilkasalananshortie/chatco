@@ -432,7 +432,7 @@ export default function UsersPage() {
             <ChevronDown size={16} aria-hidden="true" />
           </>
         ),
-        className: (isOpen) => `${fullWidth ? 'flex w-full' : 'inline-flex'} h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold text-white shadow-lg shadow-[#62A0EA]/25 admin-light:shadow-[#1A5FB4]/25 transition-colors hover:bg-[#4A8BD4] admin-light:hover:bg-[#164A8F] [&>svg:last-child]:transition-transform ${isOpen ? 'bg-[#4A8BD4] admin-light:bg-[#164A8F] [&>svg:last-child]:rotate-180' : 'bg-[#62A0EA] admin-light:bg-[#1A5FB4]'}`,
+        className: (isOpen) => `${fullWidth ? 'flex w-full' : 'inline-flex'} h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold text-white transition-colors hover:bg-[#4A8BD4] admin-light:hover:bg-[#164A8F] [&>svg:last-child]:transition-transform ${isOpen ? 'bg-[#4A8BD4] admin-light:bg-[#164A8F] [&>svg:last-child]:rotate-180' : 'bg-[#62A0EA] admin-light:bg-[#1A5FB4]'}`,
       }}
       actions={[
         { label: 'Register onsite', hint: 'Commuter at the counter, with valid ID', icon: UserPlus, onSelect: handleOpenRegisterModal },
@@ -451,7 +451,7 @@ export default function UsersPage() {
           onClick={() => setIsMobileFiltersExpanded((prev) => !prev)}
           aria-expanded={isMobileFiltersExpanded}
           aria-controls="user-management-filters"
-          className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors md:hidden ${isMobileFiltersExpanded ? 'border-[#62A0EA]/40 admin-light:border-[#1A5FB4]/40 bg-[#62A0EA]/10 admin-light:bg-[#1A5FB4]/10 text-[#62A0EA] admin-light:text-[#1A5FB4]' : 'border-[#1E2D45] admin-light:border-[#E2E8F0] bg-[#0E1628] admin-light:bg-white text-slate-300 admin-light:text-slate-700'}`}
+          className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors md:hidden ${isMobileFiltersExpanded ? 'border-[#62A0EA] admin-light:border-[#1A5FB4] bg-[#62A0EA] admin-light:bg-[#1A5FB4] text-white' : 'border-[#1E2D45] admin-light:border-[#E2E8F0] bg-[#0E1628] admin-light:bg-white text-slate-300 admin-light:text-slate-700'}`}
         >
           <SlidersHorizontal size={16} aria-hidden="true" />
           Filters
@@ -604,12 +604,12 @@ export default function UsersPage() {
 
       {/* Success banner */}
       {successMessage && (
-        <div className="mb-4 shrink-0 bg-emerald-500/10 border border-emerald-500/30 rounded-md p-3 flex items-center justify-between">
+        <div className="mb-4 shrink-0 bg-[#1A2540] admin-light:bg-[#F8FAFC] border border-[#1E2D45] admin-light:border-[#E2E8F0] rounded-md p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle size={16} className="text-emerald-400 admin-light:text-emerald-700 flex-shrink-0" />
-            <p className="text-sm text-emerald-400 admin-light:text-emerald-700">{successMessage}</p>
+            <CheckCircle size={16} className="text-[#62A0EA] admin-light:text-[#1A5FB4] flex-shrink-0" />
+            <p className="text-sm text-slate-200 admin-light:text-slate-700">{successMessage}</p>
           </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-400 admin-light:text-emerald-700 hover:text-emerald-300 admin-light:hover:text-emerald-800">
+          <button onClick={() => setSuccessMessage(null)} aria-label="Dismiss message" className="text-slate-400 admin-light:text-slate-500 hover:text-white admin-light:hover:text-slate-900">
             <XCircle size={16} />
           </button>
         </div>

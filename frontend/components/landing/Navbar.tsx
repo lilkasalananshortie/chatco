@@ -204,7 +204,7 @@ export default function Navbar({ onHomePage = true }: { onHomePage?: boolean }) 
           </Link>
           <Link
             href="/signup" scroll={false}
-            className={`hidden sm:inline-flex items-center whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold bg-[#1A5FB4] text-white hover:bg-[#164A8F] shadow-sm shadow-[#1A5FB4]/25 transition-colors ${focus}`}
+            className={`hidden sm:inline-flex items-center whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold bg-[#1A5FB4] text-white hover:bg-[#164A8F] transition-colors ${focus}`}
           >
             Create Account
           </Link>

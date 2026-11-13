@@ -1,6 +1,7 @@
 "use client";
 
 import { DiscountApplicationEntry } from './discount-application-entry';
+import { StudentRenewalEntry } from './student-renewal-entry';
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronRight, CircleHelp, Clock, KeyRound, Loader2, LogOut, Mail, Pencil, Phone, Save, ShieldCheck, ShieldX, UserRound, X } from "lucide-react";
@@ -157,40 +158,23 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
     );
   }
 
+  // Account status reads as plain text with an icon, not a coloured pill;
+  // only a rejection is red.
   const getStatusConfig = (status: AccountStatus) => {
+    const plain = "text-white/85 light:text-gray-700";
     switch (status) {
       case "ACTIVE":
-        return {
-          color: "text-white bg-emerald-700 border-emerald-600 hover:bg-emerald-800 hover:border-emerald-700 light:text-white light:bg-emerald-700 light:border-emerald-600 light:hover:bg-emerald-800 light:hover:border-emerald-700",
-          text: "Verified",
-          icon: ShieldCheck,
-        };
+        return { color: plain, text: "Verified", icon: ShieldCheck };
       case "PENDING_VERIFICATION":
       case "PENDING":
-        return {
-          color: "text-white bg-amber-700 border-amber-600 hover:bg-amber-800 hover:border-amber-700 light:text-white light:bg-amber-700 light:border-amber-600 light:hover:bg-amber-800 light:hover:border-amber-700",
-          text: "Pending Verification",
-          icon: Clock,
-        };
+        return { color: plain, text: "Pending Verification", icon: Clock };
       case "DISCOUNT_REJECTED":
       case "REJECTED":
-        return {
-          color: "text-white bg-red-700 border-red-600 hover:bg-red-800 hover:border-red-700 light:text-white light:bg-red-700 light:border-red-600 light:hover:bg-red-800 light:hover:border-red-700",
-          text: "Rejected",
-          icon: ShieldX,
-        };
+        return { color: "text-red-400 light:text-red-600", text: "Rejected", icon: ShieldX };
       case "APPROVED":
-        return {
-          color: "text-white bg-emerald-700 border-emerald-600 hover:bg-emerald-800 hover:border-emerald-700 light:text-white light:bg-emerald-700 light:border-emerald-600 light:hover:bg-emerald-800 light:hover:border-emerald-700",
-          text: "Approved",
-          icon: ShieldCheck,
-        };
+        return { color: plain, text: "Approved", icon: ShieldCheck };
       default:
-        return {
-          color: "text-white bg-slate-700 border-slate-600 hover:bg-slate-800 hover:border-slate-700 light:text-white light:bg-slate-700 light:border-slate-600 light:hover:bg-slate-800 light:hover:border-slate-700",
-          text: status ?? "Unknown",
-          icon: CircleHelp,
-        };
+        return { color: "text-white/60 light:text-gray-500", text: status ?? "Unknown", icon: CircleHelp };
     }
   };
 
@@ -235,15 +219,15 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
             <p className="text-white/50 text-sm mt-1 break-words light:text-gray-500">@{profile.username}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
-                className={`inline-flex max-w-full cursor-default items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium leading-tight transition-colors ${statusConfig.color}`}
+                className={`inline-flex max-w-full items-center gap-1.5 text-xs font-medium leading-tight ${statusConfig.color}`}
               >
-                <StatusIcon size={13} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />
+                <StatusIcon size={14} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />
                 <span className="break-words">{statusConfig.text}</span>
               </span>
-              <span className="inline-flex max-w-full cursor-default flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-[#337DD2] bg-[#1A5FB4] px-2.5 py-1.5 text-[11px] font-semibold leading-tight text-white transition-colors hover:border-[#164A8F] hover:bg-[#164A8F] light:border-[#337DD2] light:bg-[#1A5FB4] light:text-white light:hover:border-[#164A8F] light:hover:bg-[#164A8F]">
+              <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-[#2A4A70] bg-[#13283F] px-2 py-1 text-[11px] font-semibold leading-tight text-white light:border-gray-200 light:bg-white light:text-gray-800">
                 <span className="break-words">{getCommuterTypeLabel(profile.commuterType)}</span>
                 {discountPercentage > 0 && (
-                  <span className="border-l border-white/40 pl-2 font-semibold whitespace-nowrap tabular-nums text-white">{discountPercentage}% off</span>
+                  <span className="border-l border-white/30 pl-2 whitespace-nowrap tabular-nums light:border-gray-300">{discountPercentage}% off</span>
                 )}
               </span>
             </div>
@@ -251,15 +235,16 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
           {isPage && <div className="hidden self-start lg:block"><AccountMenu signOut={{ request: () => setShowLogoutConfirm(true), locked: false }} trigger="gear" /></div>}
           </div>
           {['ACTIVE', 'APPROVED'].includes(profile.accountStatus) && <DiscountApplicationEntry commuterType={profile.commuterType} onClassificationChanged={retryLoad} />}
+          {['ACTIVE', 'APPROVED'].includes(profile.accountStatus) && profile.commuterType === 'STUDENT' && <StudentRenewalEntry />}
         </div>
 
         <p id={photoHelpId} className="text-xs text-white/45 light:text-gray-500">Profile photo: JPG, PNG, or WebP. Maximum 3 MB and 4096 × 4096 pixels. Choosing a photo uploads it to your account.</p>
 
         {/* Transient success banner */}
         {successMessage && (
-          <div role="status" className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div role="status" className="bg-[#0B223A] border border-[#1E3A5C] light:bg-white light:border-gray-200 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <svg
-              className="w-5 h-5 text-emerald-400 light:text-emerald-600 flex-shrink-0 mt-0.5"
+              className="w-5 h-5 text-[#62A0EA] light:text-[#1A5FB4] flex-shrink-0 mt-0.5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -271,7 +256,7 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
                 d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-emerald-200 text-sm font-medium light:text-emerald-800">
+            <p className="text-white text-sm font-medium light:text-gray-800">
               {successMessage}
             </p>
           </div>
@@ -279,9 +264,9 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
 
         {/* Verification Alert */}
         {profile.accountStatus === "PENDING_VERIFICATION" && (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
+          <div className="bg-[#0B223A] border border-[#1E3A5C] light:bg-white light:border-gray-200 rounded-xl p-4 flex items-start gap-3">
             <svg
-              className="w-5 h-5 text-amber-400 light:text-amber-600 flex-shrink-0 mt-0.5"
+              className="w-5 h-5 text-white/70 light:text-gray-500 flex-shrink-0 mt-0.5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -294,10 +279,10 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
               />
             </svg>
             <div>
-              <p className="text-amber-200 text-sm font-bold light:text-amber-900">
+              <p className="text-white text-sm font-bold light:text-gray-900">
                 Verification Pending
               </p>
-              <p className="text-amber-200/60 text-xs light:text-amber-800 mt-0.5">
+              <p className="text-white/65 text-xs light:text-gray-600 mt-0.5">
                 Your discount is on hold until an admin verifies your uploaded
                 ID.
               </p>
@@ -458,7 +443,7 @@ export default function ProfileContent({ variant = "page", onSignOutControl }: {
             <button
               onClick={saveProfile}
               disabled={isSaving}
-              className="w-full mt-4 py-3 rounded-xl text-sm font-bold bg-[#FF6D3A] text-white hover:bg-[#e55a2b] transition-colors shadow-lg shadow-[#FF6D3A]/30 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full mt-4 py-3 rounded-xl text-sm font-bold bg-[#1A5FB4] text-white hover:bg-[#164A8F] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSaving ? (
                 <svg

@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import type { RewardData } from "@/app/(commuter)/rewards/types";
 import { REWARDS_CHANGED_EVENT } from "@/lib/commuter/rewards-events";
+import { getRenewalState, type RenewalState } from "@/lib/shared/services/student-renewal.service";
 
 /**
  * Longer than the announcement poll: ride totals only move when a fare is
@@ -45,16 +46,51 @@ interface RewardsContextValue {
   /** Vouchers the commuter can redeem right now — drives the tab badge. */
   availableVoucherCount: number;
   refetch: () => Promise<void>;
+  /**
+   * Student renewal state for current and former students; null for everyone
+   * else or until loaded. `notice_active` is the rewards page's renewal notice,
+   * and it keeps one count on the tab badge until the renewal is approved.
+   */
+  renewal: RenewalState | null;
+  refreshRenewal: () => void;
 }
 
 const RewardsContext = createContext<RewardsContextValue | null>(null);
 
 export function RewardsProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, commuterProfile } = useAuth();
 
   const [data, setData] = useState<RewardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [renewal, setRenewal] = useState<RenewalState | null>(null);
+  // Same audience as the rewards page's renewal notice: nobody else can be due.
+  const renewalAudience = commuterProfile?.commuterType === "STUDENT" || commuterProfile?.appliedType === "STUDENT";
+
+  const refreshRenewal = useCallback(() => {
+    if (!renewalAudience) return;
+    // A failed read keeps the last state, so the badge never flickers off.
+    void getRenewalState().then(setRenewal).catch(() => {});
+  }, [renewalAudience]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || !renewalAudience) {
+      setRenewal(null);
+      return;
+    }
+    refreshRenewal();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshRenewal();
+    };
+    const id = setInterval(refreshWhenVisible, POLL_INTERVAL_MS);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [authLoading, isAuthenticated, renewalAudience, refreshRenewal]);
 
   const refetch = useCallback(async () => {
     setError(null);
@@ -160,8 +196,8 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
   const availableVoucherCount = data?.availableVoucherCount ?? 0;
 
   const value = useMemo(
-    () => ({ data, isLoading, error, availableVoucherCount, refetch }),
-    [data, isLoading, error, availableVoucherCount, refetch]
+    () => ({ data, isLoading, error, availableVoucherCount, refetch, renewal, refreshRenewal }),
+    [data, isLoading, error, availableVoucherCount, refetch, renewal, refreshRenewal]
   );
 
   return <RewardsContext.Provider value={value}>{children}</RewardsContext.Provider>;

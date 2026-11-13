@@ -64,8 +64,8 @@ function StatusText({ status }: { status: string | null }) {
   const isOff = status === 'DISABLED' || status === 'DEACTIVATED';
   const label = isActive ? 'Active' : isOff ? 'Deactivated' : status.charAt(0) + status.slice(1).toLowerCase();
   return (
-    <span className={`inline-flex items-center gap-1.5 ${isActive ? 'text-emerald-400 admin-light:text-emerald-700' : 'text-slate-400 admin-light:text-slate-500'}`}>
-      <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${isActive ? 'bg-emerald-400 admin-light:bg-emerald-600' : 'bg-slate-500'}`} />
+    <span className={`inline-flex items-center gap-1.5 ${isActive ? 'text-slate-200 admin-light:text-slate-800' : 'text-slate-400 admin-light:text-slate-500'}`}>
+      <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${isActive ? 'bg-slate-300 admin-light:bg-slate-600' : 'bg-slate-600 admin-light:bg-slate-300'}`} />
       {label}
     </span>
   );
@@ -263,7 +263,7 @@ export function ShiftLedger<T extends ShiftLedgerEntry>({
                 <li key={entry.shift_id} className={`grid grid-cols-2 gap-x-4 gap-y-1 px-4 py-3 md:items-center ${LEDGER_COLUMNS}`}>
                   <p className="text-sm font-medium tabular-nums text-white admin-light:text-slate-900">{formatDate(entry.time_in)}</p>
                   <p className="text-right text-xs font-medium md:order-last">
-                    <span className={isActive ? 'text-emerald-400 admin-light:text-emerald-700' : 'text-slate-400 admin-light:text-slate-500'}>
+                    <span className={isActive ? 'text-slate-200 admin-light:text-slate-800' : 'text-slate-400 admin-light:text-slate-500'}>
                       {isActive ? 'On shift' : 'Ended'}
                     </span>
                   </p>
@@ -273,7 +273,7 @@ export function ShiftLedger<T extends ShiftLedgerEntry>({
                   </div>
                   <p className="min-w-0 truncate text-right text-sm text-slate-300 admin-light:text-slate-700 md:text-left">{middleValue(entry) || '—'}</p>
                   <p className="col-span-2 text-xs tabular-nums text-slate-400 admin-light:text-slate-500 md:col-span-1">
-                    {formatTime(entry.time_in)} → {entry.time_out ? formatTime(entry.time_out) : isActive ? <span className="text-emerald-400 admin-light:text-emerald-700">now</span> : '—'}
+                    {formatTime(entry.time_in)} → {entry.time_out ? formatTime(entry.time_out) : isActive ? <span className="font-semibold text-slate-200 admin-light:text-slate-800">now</span> : '—'}
                   </p>
                 </li>
               );

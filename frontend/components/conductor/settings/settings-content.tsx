@@ -172,9 +172,10 @@ export default function SettingsContent({ showHeader = true, onSignOutControl, s
           </h2>
           {username && <p className="mt-1 break-words text-sm text-white/50 light:text-gray-600">@{username}</p>}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[#337DD2] bg-[#1A5FB4] px-2.5 py-1 text-[11px] font-semibold text-white">Conductor</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-600 bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-white">
-              <LockKeyhole size={12} aria-hidden="true" />Managed by admin
+            <span className="text-xs font-semibold text-white light:text-gray-900">Conductor</span>
+            <span aria-hidden="true" className="text-white/30 light:text-gray-300">·</span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-white/70 light:text-gray-600">
+              <LockKeyhole size={13} aria-hidden="true" />Managed by admin
             </span>
           </div>
         </div>
@@ -256,7 +257,7 @@ export default function SettingsContent({ showHeader = true, onSignOutControl, s
         {logoutLocked && (
           <div className="flex items-center justify-center gap-1.5 mb-3">
             <svg
-              className="w-3 h-3 text-amber-400/70 light:text-amber-700 flex-shrink-0"
+              className="w-3 h-3 text-white/60 light:text-gray-500 flex-shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -268,7 +269,7 @@ export default function SettingsContent({ showHeader = true, onSignOutControl, s
                 d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
               />
             </svg>
-            <p className="text-xs text-amber-400/70 light:text-amber-700 font-medium">
+            <p className="text-xs text-white/70 light:text-gray-600 font-medium">
               {LOGOUT_LOCKED_HINT}
             </p>
           </div>

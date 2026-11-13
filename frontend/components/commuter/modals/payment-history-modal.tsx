@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { CheckCircle2, Clock3, XCircle, type LucideIcon } from "lucide-react";
 import {
   fetchPaymentHistory,
   type CommuterPayment,
@@ -20,18 +21,22 @@ type TimeFilter = "all" | "today" | "week" | "month";
 
 const PER_PAGE = 20;
 
-// ─── Status badge (covers the full PaymentStatus lifecycle) ──────────
-function getStatusBadge(status: PaymentStatus) {
-  const badges: Record<PaymentStatus, { bg: string; text: string; label: string }> = {
-    paid: { bg: "bg-green-500/10 light:bg-green-50", text: "text-green-400 light:text-green-600", label: "Paid" },
-    pending: { bg: "bg-yellow-500/10 light:bg-yellow-50", text: "text-yellow-400 light:text-yellow-600", label: "Pending" },
-    processing: { bg: "bg-blue-500/10 light:bg-blue-50", text: "text-blue-400 light:text-blue-600", label: "Processing" },
-    failed: { bg: "bg-red-500/10 light:bg-red-50", text: "text-red-400 light:text-red-600", label: "Failed" },
-    cancelled: { bg: "bg-white/10 light:bg-gray-100", text: "text-white/60 light:text-gray-500", label: "Cancelled" },
-    expired: { bg: "bg-white/10 light:bg-gray-100", text: "text-white/60 light:text-gray-500", label: "Expired" },
-    refunded: { bg: "bg-purple-500/10 light:bg-purple-50", text: "text-purple-400 light:text-purple-600", label: "Refunded" },
+// ─── Status (covers the full PaymentStatus lifecycle) ────────────────
+// Plain text, no tinted pill: the icon carries the meaning and only a failed
+// payment is red. Ended-without-payment states are muted.
+const STATUS_TEXT = "text-white/85 light:text-gray-700";
+const MUTED_TEXT = "text-white/50 light:text-gray-500";
+function getStatusBadge(status: PaymentStatus): { text: string; icon?: LucideIcon; label: string } {
+  const badges: Record<PaymentStatus, { text: string; icon?: LucideIcon; label: string }> = {
+    paid: { text: STATUS_TEXT, icon: CheckCircle2, label: "Paid" },
+    pending: { text: STATUS_TEXT, icon: Clock3, label: "Pending" },
+    processing: { text: STATUS_TEXT, label: "Processing" },
+    failed: { text: "text-red-400 light:text-red-600", icon: XCircle, label: "Failed" },
+    cancelled: { text: MUTED_TEXT, label: "Cancelled" },
+    expired: { text: MUTED_TEXT, label: "Expired" },
+    refunded: { text: STATUS_TEXT, label: "Refunded" },
   };
-  return badges[status] ?? { bg: "bg-white/5 light:bg-gray-50", text: "text-white/70 light:text-gray-600", label: status };
+  return badges[status] ?? { text: MUTED_TEXT, label: status };
 }
 
 // Plain text, no colour coding: which voucher was used and what it did.
@@ -245,10 +250,10 @@ export default function PaymentHistoryModal({ onClose }: PaymentHistoryModalProp
             <button
               key={tab.key}
               onClick={() => selectPreset(tab.key)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
                 timeFilter === tab.key && !isCustomRange
-                  ? "bg-[#1A5FB4] text-white shadow-sm"
-                  : "bg-white/10 light:bg-gray-100 text-white/60 light:text-gray-500 hover:bg-white/15 light:hover:bg-gray-200"
+                  ? "border-[#1A5FB4] bg-[#1A5FB4] text-white"
+                  : "border-[#1E3A5C] bg-[#0B223A] light:border-gray-200 light:bg-gray-100 text-white/70 light:text-gray-600 hover:bg-[#13283F] light:hover:bg-gray-200"
               }`}
             >
               {tab.label}
@@ -298,7 +303,7 @@ export default function PaymentHistoryModal({ onClose }: PaymentHistoryModalProp
               <p className="text-red-400 light:text-red-500 font-medium text-sm mb-3">{error}</p>
               <button
                 onClick={() => loadPage(1, timeFilter, dateFrom, dateTo)}
-                className="px-4 py-2 rounded-full text-xs font-semibold bg-[#1A5FB4] text-white"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#1A5FB4] text-white hover:bg-[#164A8F]"
               >
                 Try again
               </button>
@@ -367,7 +372,8 @@ export default function PaymentHistoryModal({ onClose }: PaymentHistoryModalProp
                         <p className="text-sm font-bold text-white light:text-[#071A2E]">
                           {tx.voucher && tx.amount <= 0 ? "Free" : `- ${formatPeso(tx.amount)}`}
                         </p>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${badge.bg} ${badge.text}`}>
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${badge.text}`}>
+                          {badge.icon && <badge.icon size={12} aria-hidden="true" className="shrink-0" />}
                           {badge.label}
                         </span>
                       </div>
@@ -474,7 +480,7 @@ export default function PaymentHistoryModal({ onClose }: PaymentHistoryModalProp
                             onClick={() => setActiveFeedbackRide(tx)}
                             className={`w-full mt-2 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
                               tx.feedback
-                                ? "bg-green-500/10 light:bg-green-50 text-green-400 light:text-green-700 hover:bg-green-500/20 light:hover:bg-green-100"
+                                ? "border border-[#2A4A70] bg-[#13283F] text-white hover:bg-[#1A3350] light:border-gray-200 light:bg-white light:text-gray-800 light:hover:bg-gray-50"
                                 : "bg-[#1A5FB4] text-white hover:bg-[#155a9c]"
                             }`}
                           >

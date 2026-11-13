@@ -48,7 +48,7 @@ export default function About() {
               );
             })}
           </div>
-          <span className="absolute left-[58%] top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-8 h-8 rounded-lg bg-[#1A5FB4] text-white shadow-md shadow-[#1A5FB4]/30 ring-4 ring-white">
+          <span className="absolute left-[58%] top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-8 h-8 rounded-lg bg-[#1A5FB4] text-white ring-4 ring-white">
             <Bus size={16} strokeWidth={2.4} />
           </span>
         </div>

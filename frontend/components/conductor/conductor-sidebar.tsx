@@ -35,7 +35,7 @@ export default function ConductorSidebar({ pathname }: { pathname: string }) {
           href={navItems[0].href}
           className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
             pathname === navItems[0].href
-              ? "bg-[#1A5FB4] text-white shadow-lg shadow-[#1A5FB4]/30"
+              ? "bg-[#1A5FB4] text-white"
               : "text-white/50 hover:text-white hover:bg-white/5 light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100"
           }`}
         >
@@ -69,7 +69,7 @@ export default function ConductorSidebar({ pathname }: { pathname: string }) {
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? "bg-[#1A5FB4] text-white shadow-lg shadow-[#1A5FB4]/30"
+                  ? "bg-[#1A5FB4] text-white"
                   : "text-white/50 hover:text-white hover:bg-white/5 light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100"
               }`}
             >

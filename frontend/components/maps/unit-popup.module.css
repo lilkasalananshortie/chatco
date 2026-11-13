@@ -60,10 +60,8 @@
 .title { margin-top: 2px; color: var(--popup-title); font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 .body { padding: 14px 16px 16px; }
 .status { display: block; font-size: 13px; font-weight: 600; text-align: center; }
-.status[data-tone='success'] { color: var(--tone-success-text); }
-.status[data-tone='warning'] { color: var(--tone-warning-text); }
-.status[data-tone='danger'] { color: var(--tone-danger-text); }
-.status[data-tone='info'] { color: var(--tone-info-text); }
+/* Capacity and break status read as plain text: no colour per state. */
+.status { color: var(--popup-title); }
 .details { display: grid; gap: 10px; margin: 14px 0 0; }
 /* Content-sized columns: Leaflet sizes the popup from its min-content width,
    which a minmax(0, 1fr) value column reported as zero, so long values like

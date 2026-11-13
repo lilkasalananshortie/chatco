@@ -51,7 +51,7 @@ export default function DownloadApp() {
           </Link>
         </div>
 
-        <div className="rounded-3xl border border-[#DAEEFF] bg-[#F0F7FF] p-6 shadow-xl shadow-[#1A5FB4]/5 md:p-8">
+        <div className="rounded-3xl border border-[#DAEEFF] bg-[#F0F7FF] p-6 shadow-xl shadow-black/5 md:p-8">
           <div className="flex items-center gap-3 border-b border-[#DAEEFF] pb-6">
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#071A2E]">
               <Image src={logo} alt="" width={44} height={44} />

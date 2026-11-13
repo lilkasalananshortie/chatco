@@ -89,9 +89,9 @@ export function MobileDashboardCard({
             <div className="flex items-center gap-2">
               <div className={`flex-1 rounded-xl border px-3 py-2 ${UNIT_STATUS_PANEL_CLASS}`}>
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${isOnBreak ? 'bg-sky-400 shadow-sm shadow-sky-400/50' : status === 'Available' ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : status === 'Standing' ? 'bg-amber-400 shadow-sm shadow-amber-400/50' : 'bg-red-400 shadow-sm shadow-red-400/50'}`} />
+                  <div className="w-2 h-2 rounded-full bg-white/60 light:bg-gray-500" />
                   <span className="text-[10px] font-bold text-white/50 light:text-gray-500 uppercase tracking-wider">Status</span>
-                  <span className={`ml-auto text-[10px] font-bold ${isOnBreak ? "text-sky-300 light:text-sky-700" : "text-white/60 light:text-gray-700"}`}>
+                  <span className={`ml-auto text-[10px] font-bold ${isOnBreak ? "text-white light:text-gray-900" : "text-white/60 light:text-gray-700"}`}>
                     {isOnBreak ? "On Break" : status}
                   </span>
                 </div>

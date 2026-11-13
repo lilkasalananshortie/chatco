@@ -27,11 +27,8 @@ interface DesktopDashboardBarProps {
   canOperate: boolean;
 }
 
-const STATUS_DOT_CLASSES: Record<ConductorStatus, string> = {
-  Available: "bg-emerald-400 shadow-sm shadow-emerald-400/50",
-  Standing: "bg-amber-400 shadow-sm shadow-amber-400/50",
-  Full: "bg-red-400 shadow-sm shadow-red-400/50",
-};
+// One neutral dot for every unit status; the status text beside it says which.
+const STATUS_DOT_CLASS = "bg-white/60 light:bg-gray-500";
 
 /**
  * Wide-screen (xl:+) counterpart to DesktopDashboardCard — same data and
@@ -90,9 +87,7 @@ export function DesktopDashboardBar({
       <div className="flex flex-col justify-center gap-1.5 px-4 py-3">
         <div className="flex items-center gap-1.5">
           <div
-            className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-              isOnBreak ? "bg-sky-400 shadow-sm shadow-sky-400/50" : STATUS_DOT_CLASSES[status]
-            }`}
+            className={`w-2 h-2 rounded-full ${STATUS_DOT_CLASS}`}
           />
           <p className="text-[10px] font-semibold text-white/50 light:text-gray-500 uppercase tracking-wider whitespace-nowrap">
             {isOnBreak ? "On Break" : "Unit Status"}
