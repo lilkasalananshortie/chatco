@@ -42,7 +42,7 @@ export interface ApiFaqItem {
 /**
  * Offline fallback for the landing FAQ chat, shown only until /api/faqs
  * responds. Mirrors backend FaqSeeder (and migration
- * 2026_11_09_000001_refresh_landing_faqs) word for word.
+ * 2026_11_22_000001_complete_landing_faqs) word for word.
  */
 const FALLBACK_ITEMS: Record<string, FAQItem[]> = {
   "getting-started": [
@@ -61,8 +61,22 @@ const FALLBACK_ITEMS: Record<string, FAQItem[]> = {
       answer: "Yes. Creating an account and using the app cost nothing. You only pay your regular fare, by GCash or in cash.",
     },
     {
+      question: "Where does E-CHATCO operate?",
+      answer: "E-CHATCO runs on the Calumpit–Meycauayan route in Bulacan, with 34 official stop points.",
+    },
+    {
       question: "What time is the first trip and last trip?",
       answer: "The first trip starts at 4:10 AM on weekdays and 5:00 AM on weekends. Trips run until 9:00 PM every day.",
+    },
+    {
+      question: "I forgot my password. What do I do?",
+      answer:
+        "Tap Forgot password and enter your account email. We will send a code that works for 15 minutes, then you can set a new password. This signs you out on your other devices. Accounts still pending approval cannot reset a password yet.",
+    },
+    {
+      question: "Why can't I sign in or sign up right now?",
+      answer:
+        "E-CHATCO may be under maintenance. Sign-in and registration return once it ends. If your account is new, it may also still be waiting for admin approval.",
     },
   ],
   payments: [
@@ -88,19 +102,34 @@ const FALLBACK_ITEMS: Record<string, FAQItem[]> = {
     {
       question: "How do I get a Student, Senior Citizen, or PWD discount?",
       answer:
-        "Choose your commuter type when you sign up and upload the matching ID. Already registered as Regular? Apply from your Profile. Once an admin approves it, the discount is applied to your fare automatically. Students renew their discount once a year.",
+        "Choose your commuter type when you sign up and upload the matching ID. Already registered as Regular? Apply from your Profile. Once an admin approves it, the discount is applied to your fare automatically. Students renew once a year, and PWD cardholders renew when their ID expires.",
+    },
+    {
+      question: "How do I renew my Student or PWD discount?",
+      answer:
+        "When your renewal is due, you will get a reminder in the app. Students submit a current school ID or enrollment proof, and PWD cardholders submit their renewed ID and its valid-until date. An admin reviews it and may ask for a correction. If you do not renew in time, your fare returns to the regular rate.",
     },
   ],
   riding: [
     {
       question: "How do I hail a jeepney?",
       answer:
-        "Press and hold Hold to Hail on the map. Your pickup point is sent to the nearest on-duty CHATCO jeep within 1 km of you, and the hail stays active for 3 minutes. You need to be near the route, and the jeep cannot be on break.",
+        "Press and hold Hold to Hail on the map. Your pickup point is sent to the nearest on-duty CHATCO jeep within 1 km of you, and the hail stays active for 3 minutes. You need to be near the route, and the jeep cannot be full or on break.",
     },
     {
-      question: "Why can't I see all jeeps on the map?",
+      question: "Why can't I hail a jeep I can see on the map?",
       answer:
-        "The map only shows CHATCO jeeps within 1 km of you, so it stays clear and shows the units you can actually catch, along with about how long each one will take to reach you.",
+        "The map shows all on-duty CHATCO jeeps, but you can only hail one that is within 1 km of you and not full. You also need to be within 1 km of the route. ETA appears for jeeps you can hail.",
+    },
+    {
+      question: "Why is a jeep missing from the map?",
+      answer:
+        "A jeep appears only while it is on an active trip and sending its location. It will not show if the conductor is on break, has ended the shift, or has lost GPS signal.",
+    },
+    {
+      question: "How do I know which way a jeep is going?",
+      answer:
+        "Each jeep on the map points in its direction of travel, toward Calumpit or Meycauayan, so you can tell whether it is coming your way before you hail.",
     },
     {
       question: "Can I pay for my companions?",
@@ -111,11 +140,6 @@ const FALLBACK_ITEMS: Record<string, FAQItem[]> = {
       question: "Can I share my ride with someone?",
       answer:
         "Yes. Tap Share Ride on your Home screen to create a live location link for family or friends. They can follow your trip in any browser without the app. The link stays live for 30 minutes, and you can stop sharing anytime.",
-    },
-    {
-      question: "How do I know which way a jeep is going?",
-      answer:
-        "Each jeep on the map points in its direction of travel, toward Calumpit or Meycauayan, so you can tell whether it is coming your way before you hail.",
     },
   ],
   safety: [
@@ -147,6 +171,11 @@ const FALLBACK_ITEMS: Record<string, FAQItem[]> = {
         "Every 10 paid rides earns you a free-ride voucher, and the count starts over so you can keep earning. GCash rides count automatically. For cash rides, open Rewards and scan the QR on your paper receipt.",
     },
     {
+      question: "How do I count a cash ride?",
+      answer:
+        "Keep the paper receipt from the conductor. Sign in, open Rewards, and scan the receipt's QR. GCash rides count automatically.",
+    },
+    {
       question: "How do I check my rewards?",
       answer:
         "Open Rewards to see how many rides you have counted toward your next voucher and the vouchers you can use. You will also get a notification when a new voucher is ready.",
@@ -155,6 +184,10 @@ const FALLBACK_ITEMS: Record<string, FAQItem[]> = {
       question: "Do vouchers expire?",
       answer:
         "Yes. A free-ride voucher is valid for 3 days after you earn it, and each voucher shows its expiry date. When you pay, the app offers your voucher automatically.",
+    },
+    {
+      question: "Where can I see announcements?",
+      answer: "Open Rewards & Announcements. A badge on the tab shows when you have unread updates.",
     },
   ],
 };

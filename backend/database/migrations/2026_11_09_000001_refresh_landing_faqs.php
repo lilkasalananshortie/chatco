@@ -125,6 +125,12 @@ return new class extends Migration
     public function up(): void
     {
         DB::transaction(function () {
+            // A fresh database has nothing to refresh. Inserting the additions
+            // here would make FaqSeeder see existing rows and skip everything.
+            if (DB::table('faq_items')->doesntExist()) {
+                return;
+            }
+
             foreach (self::REPLACEMENTS as [, $oldQuestion, $oldAnswer, $newQuestion, $newAnswer]) {
                 DB::table('faq_items')
                     ->where('question', $oldQuestion)
