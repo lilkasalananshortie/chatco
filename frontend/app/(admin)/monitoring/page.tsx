@@ -234,7 +234,6 @@ export default function MonitoringPage() {
           <div className="min-h-0 flex-1 overflow-hidden">
             <AdminCommuterMap
               liveVehicles={liveMapVehicles}
-              demandZones={data.demandZones}
               focusPosition={focusPosition}
               focusNonce={focusNonce}
             />

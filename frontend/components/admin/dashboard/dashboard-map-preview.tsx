@@ -6,7 +6,6 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { SkeletonMap } from "@/components/admin/ui/skeleton";
 import { useFleetPoll, toLiveVehicleMarkers } from "@/lib/admin/services/monitoring.service";
-import { useMonitoringData } from "@/app/(admin)/monitoring/data/data-monitoring";
 
 const AdminCommuterMap = dynamic(() => import("@/components/admin/admin-commuter-map"), {
   ssr: false,
@@ -14,10 +13,9 @@ const AdminCommuterMap = dynamic(() => import("@/components/admin/admin-commuter
 });
 
 export function DashboardMapPreview() {
-  // Same live feeds as the Monitoring map (5s fleet poll + demand zones), so
-  // the preview shows the same units, crew popups and demand overlay.
+  // Same live fleet feed as the Monitoring map (5s poll), so the preview shows
+  // the same units and crew popups.
   const { fleet } = useFleetPoll(5000);
-  const { data } = useMonitoringData(1, "", "recent", false);
   const liveVehicles = useMemo(() => toLiveVehicleMarkers(fleet), [fleet]);
 
   return (
@@ -29,7 +27,7 @@ export function DashboardMapPreview() {
         <Link href="/monitoring" className="text-xs text-[#62A0EA] admin-light:text-[#1A5FB4] hover:underline">View Full Map</Link>
       </div>
       <div className="flex-1 rounded-md overflow-hidden border border-[#162033] admin-light:border-[#E2E8F0] mx-1 mb-1">
-        <AdminCommuterMap liveVehicles={liveVehicles} demandZones={data.demandZones} />
+        <AdminCommuterMap liveVehicles={liveVehicles} />
       </div>
     </div>
   );
